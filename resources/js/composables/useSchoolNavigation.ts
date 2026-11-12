@@ -79,16 +79,16 @@ export function useSchoolNavigationGroups() {
                     title: 'Evaluation Management',
                     items: [
                         {
-                            title: 'Evaluation forms',
-                            href: forms(),
-                            icon: ClipboardList,
-                            permission: 'forms.manage',
-                        },
-                        {
                             title: 'Evaluation periods',
                             href: periods(),
                             icon: CalendarDays,
                             permission: 'periods.manage',
+                        },
+                        {
+                            title: 'Evaluation templates',
+                            href: forms(),
+                            icon: ClipboardList,
+                            permission: 'forms.manage',
                         },
                     ],
                 },
@@ -97,7 +97,7 @@ export function useSchoolNavigationGroups() {
                     title: 'Administration',
                     items: [
                         {
-                            title: 'Strands and Sections',
+                            title: 'Configuration',
                             href: strands(),
                             icon: School,
                             permission: 'strands.manage',

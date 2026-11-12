@@ -36,7 +36,7 @@ const props = defineProps<{
         is_open: boolean;
         opens_at: string;
         closes_at: string;
-        form: { name: string; description: string | null };
+        form: { name: string; version: number; description: string | null };
         assignments: { id: number; teacher: string; submitted: boolean }[];
     }[];
 }>();
@@ -157,7 +157,7 @@ function display(value: string) {
                 <div>
                     <h2 class="text-lg font-semibold">{{ period.name }}</h2>
                     <p class="mt-1 text-sm text-slate-500">
-                        {{ period.form.name }}
+                        {{ period.form.name }} · v{{ period.form.version }}
                     </p>
                 </div>
                 <span

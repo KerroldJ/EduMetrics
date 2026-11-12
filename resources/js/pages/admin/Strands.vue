@@ -25,7 +25,7 @@ defineOptions({
         breadcrumbs: [
             { title: 'Dashboard', href: dashboard() },
             { title: 'Administration' },
-            { title: 'Strands and Sections', href: index() },
+            { title: 'Configuration', href: index() },
         ],
     },
 });
@@ -57,8 +57,8 @@ const schoolYearFields: Field[] = [
     {
         key: 'name',
         label: 'School year',
+        type: 'school-year',
         required: true,
-        hint: 'Use consecutive years, for example 2026-2027.',
     },
 ];
 const deleteErrors = ref<Record<string, string>>({});
@@ -95,7 +95,7 @@ function deleteRecord(record: RecordData, noun: string, url: string) {
 </script>
 <template>
     <SchoolPage
-        title="Strands and Sections"
+        title="Configuration"
         description="Manage strands, sections, and school years for student enrollment, teacher assignments, and evaluation periods."
     >
         <TabsRoot

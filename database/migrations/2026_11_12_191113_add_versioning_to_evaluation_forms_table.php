@@ -11,8 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('evaluation_forms', function (Blueprint $table) {
-            //
+        Schema::table('evaluation_forms', function (Blueprint $table): void {
+            $table->foreignId('template_id')->nullable()->constrained('evaluation_forms')->restrictOnDelete();
+            $table->unsignedInteger('version')->default(1);
+            $table->unique(['template_id', 'version']);
         });
     }
 
@@ -21,8 +23,10 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('evaluation_forms', function (Blueprint $table) {
-            //
+        Schema::table('evaluation_forms', function (Blueprint $table): void {
+            $table->dropUnique(['template_id', 'version']);
+            $table->dropConstrainedForeignId('template_id');
+            $table->dropColumn('version');
         });
     }
 };

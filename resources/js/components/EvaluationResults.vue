@@ -21,6 +21,11 @@ function width(score: number, max: number) {
                         {{ showTeacher ? result.period : result.school_year }} ·
                         {{ result.status }}
                     </p>
+                    <p class="mt-1 text-xs text-slate-500">
+                        {{ result.template_name }} · v{{
+                            result.template_version
+                        }}
+                    </p>
                 </div>
                 <div class="text-right">
                     <p

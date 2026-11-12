@@ -20,7 +20,7 @@ class EvaluationPeriodController extends Controller
 {
     public function index(): Response
     {
-        return Inertia::render('admin/Periods', ['periods' => EvaluationPeriod::with('form:id,name')->withCount('evaluations')->orderByDesc('id')->get(), 'forms' => EvaluationForm::where('is_active', true)->whereHas('criteria')->orderBy('name')->get(['id', 'name', 'scale_min', 'scale_max']), 'schoolYears' => SchoolYear::orderByDesc('name')->get(['id', 'name'])]);
+        return Inertia::render('admin/Periods', ['periods' => EvaluationPeriod::with('form:id,name,version')->withCount('evaluations')->orderByDesc('id')->get(), 'forms' => EvaluationForm::with(['criteria' => fn ($query) => $query->orderBy('position')])->whereHas('criteria')->orderBy('name')->orderByDesc('version')->get(['id', 'name', 'version', 'description', 'scale_min', 'scale_max', 'performance_bands', 'is_active']), 'schoolYears' => SchoolYear::orderByDesc('name')->get(['id', 'name'])]);
     }
 
     public function store(SaveEvaluationPeriodRequest $request): RedirectResponse
@@ -28,8 +28,9 @@ class EvaluationPeriodController extends Controller
         DB::transaction(function () use ($request): void {
             $form = EvaluationForm::whereKey($request->integer('evaluation_form_id'))->lockForUpdate()->firstOrFail();
             if (! $form->is_active || ! $form->criteria()->exists()) {
-                throw ValidationException::withMessages(['evaluation_form_id' => 'Choose an active form with questions.']);
-            } EvaluationPeriod::create([...$request->validated(), 'status' => 'draft']);
+                throw ValidationException::withMessages(['evaluation_form_id' => 'Choose an active template version with questions.']);
+            }
+            EvaluationPeriod::create([...$request->validated(), 'status' => 'draft']);
         });
 
         return to_route('periods.index')->with('success', 'Evaluation period created as a draft.');
@@ -41,7 +42,11 @@ class EvaluationPeriodController extends Controller
             $period = EvaluationPeriod::whereKey($period->id)->lockForUpdate()->firstOrFail();
             if ($period->status !== 'draft') {
                 throw ValidationException::withMessages(['period' => 'Only draft periods can be edited.']);
-            } EvaluationForm::whereKey($request->integer('evaluation_form_id'))->lockForUpdate()->firstOrFail();
+            }
+            $form = EvaluationForm::whereKey($request->integer('evaluation_form_id'))->lockForUpdate()->firstOrFail();
+            if ((! $form->is_active && $form->id !== $period->evaluation_form_id) || ! $form->criteria()->exists()) {
+                throw ValidationException::withMessages(['evaluation_form_id' => 'Choose an active template version with questions.']);
+            }
             $period->update($request->validated());
         });
 
@@ -59,8 +64,15 @@ class EvaluationPeriodController extends Controller
             };
             if (! $valid) {
                 throw ValidationException::withMessages(['period' => 'That transition is not available for this period.']);
-            } if ($data['action'] === 'open' && (! $period->form->is_active || ! $period->form->criteria()->exists())) {
-                throw ValidationException::withMessages(['period' => 'An active form with questions is required.']);
+            }
+            if ($data['action'] === 'open' && $period->evaluation_form_id === null) {
+                throw ValidationException::withMessages(['period' => 'Choose a template version before opening this period.']);
+            }
+            if ($data['action'] === 'open') {
+                EvaluationForm::whereKey($period->evaluation_form_id)->lockForUpdate()->firstOrFail();
+            }
+            if ($data['action'] === 'open' && ! $period->form->criteria()->exists()) {
+                throw ValidationException::withMessages(['period' => 'The pinned template version must have questions.']);
             } $period->update(['status' => match ($data['action']) {
                 'open' => 'open','close' => 'closed','release' => 'released'
             }, 'released_at' => $data['action'] === 'release' ? now() : null]);

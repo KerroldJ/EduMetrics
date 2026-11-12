@@ -39,7 +39,7 @@ class Evaluation extends Model
         return $this->hasMany(EvaluationResponse::class, 'evaluation_id');
     }
 
-    /** @return array<int, array{teacher_id: int, teacher: string, period_id: int, period: string, school_year: string, status: string, count: int, score: float, scale_max: int, performance_level: ?string, criteria: array<int, array{prompt: string, average: float}>, comments: array<int, string>}> */
+    /** @return array<int, array{teacher_id: int, teacher: string, period_id: int, period: string, school_year: string, status: string, count: int, score: float, template_name: string, template_version: int, scale_max: int, performance_level: ?string, criteria: array<int, array{prompt: string, average: float}>, comments: array<int, string>}> */
     public static function summaries(?int $periodId = null, ?int $teacherId = null, bool $releasedOnly = false): array
     {
         $query = static::query()->select(['teacher_id', 'evaluation_period_id'])->selectRaw('COUNT(*) AS response_count, AVG(score) AS average_score')
@@ -61,7 +61,7 @@ class Evaluation extends Model
                 $comments = static::where('teacher_id', $row->teacher_id)->where('evaluation_period_id', $row->evaluation_period_id)->whereNotNull('comment')->where('comment', '!=', '')->orderBy('comment')->limit(100)->pluck('comment')->map(fn ($comment): string => (string) $comment)->all();
             }
 
-            return ['teacher_id' => (int) $row->teacher_id, 'teacher' => $row->teacher->name, 'period_id' => (int) $row->evaluation_period_id, 'period' => $row->period->name, 'school_year' => $row->period->school_year, 'status' => $row->period->status, 'count' => (int) $row->getAttribute('response_count'), 'score' => $score, 'scale_max' => $form->scale_max, 'performance_level' => $band['label'] ?? null, 'criteria' => $criteria, 'comments' => $comments];
+            return ['teacher_id' => (int) $row->teacher_id, 'teacher' => $row->teacher->name, 'period_id' => (int) $row->evaluation_period_id, 'period' => $row->period->name, 'school_year' => $row->period->school_year, 'status' => $row->period->status, 'count' => (int) $row->getAttribute('response_count'), 'score' => $score, 'template_name' => $form->name, 'template_version' => $form->version, 'scale_max' => $form->scale_max, 'performance_level' => $band['label'] ?? null, 'criteria' => $criteria, 'comments' => $comments];
         })->values()->all();
     }
 }

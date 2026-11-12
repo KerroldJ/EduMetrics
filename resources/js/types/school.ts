@@ -8,6 +8,7 @@ export type Field = {
         | 'password'
         | 'checkbox'
         | 'select'
+        | 'school-year'
         | 'number'
         | 'hidden';
     required?: boolean;
@@ -19,6 +20,26 @@ export type Field = {
 };
 export type RecordData = { id: number; [key: string]: unknown };
 export type PageLink = { url: string | null; label: string; active: boolean };
+export type EvaluationTemplate = {
+    id: number;
+    template_id: number | null;
+    version: number;
+    is_locked: boolean;
+    name: string;
+    description: string | null;
+    scale_min: number;
+    scale_max: number;
+    is_active: boolean;
+    periods_count: number;
+    periods: {
+        id: number;
+        name: string;
+        school_year: string;
+        status: string;
+    }[];
+    criteria: { prompt: string; weight: number | string }[];
+    performance_bands: { label: string; min: number; max: number }[] | null;
+};
 export type Results = {
     teacher_id: number;
     teacher: string;
@@ -28,6 +49,8 @@ export type Results = {
     status: string;
     count: number;
     score: number;
+    template_name: string;
+    template_version: number;
     scale_max: number;
     performance_level: string | null;
     criteria: { prompt: string; average: number }[];

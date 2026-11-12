@@ -85,7 +85,7 @@ const preparation = computed(() => [
         url: assignments(),
     },
     {
-        title: 'Evaluation forms',
+        title: 'Evaluation templates',
         count: props.activity.formCount,
         url: forms(),
     },

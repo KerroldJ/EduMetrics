@@ -37,6 +37,7 @@ const props = defineProps<{
     assignment: { id: number; teacher: string };
     form: {
         name: string;
+        version: number;
         description: string | null;
         scale_min: number;
         scale_max: number;
@@ -69,7 +70,7 @@ function submit() {
             (adminView ? 'Preview evaluation: ' : 'Evaluate ') +
             assignment.teacher
         "
-        :description="period.name + ' · ' + form.name"
+        :description="period.name + ' · ' + form.name + ' · v' + form.version"
         ><template #actions
             ><Button variant="outline" as-child
                 ><Link

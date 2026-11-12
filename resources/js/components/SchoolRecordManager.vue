@@ -6,6 +6,7 @@ import FormErrors from '@/components/FormErrors.vue';
 import PaginationLinks from '@/components/PaginationLinks.vue';
 import PasswordInput from '@/components/PasswordInput.vue';
 import SchoolFormDialog from '@/components/SchoolFormDialog.vue';
+import SchoolYearPicker from '@/components/SchoolYearPicker.vue';
 import { Button } from '@/components/ui/button';
 import type { Field, PageLink, RecordData } from '@/types/school';
 const props = defineProps<{
@@ -174,8 +175,15 @@ function search() {
                                 <label :for="field.key" class="school-label">{{
                                     field.label
                                 }}</label>
+                                <SchoolYearPicker
+                                    v-if="field.type === 'school-year'"
+                                    :id="field.key"
+                                    v-model="form[field.key]"
+                                    :required="field.required"
+                                    :invalid="Boolean(form.errors[field.key])"
+                                />
                                 <select
-                                    v-if="field.type === 'select'"
+                                    v-else-if="field.type === 'select'"
                                     :id="field.key"
                                     v-model="form[field.key]"
                                     class="school-input"

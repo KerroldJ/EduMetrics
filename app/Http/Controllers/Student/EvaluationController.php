@@ -24,10 +24,10 @@ class EvaluationController extends Controller
     {
         $adminView = $request->user()->can('evaluations.monitor');
         $user = $this->studentForView($request);
-        $periods = $user ? EvaluationPeriod::with('form:id,name,description,scale_min,scale_max')->where('school_year', $user->school_year)->whereIn('status', ['open', 'closed', 'released'])->orderByDesc('id')->get()->map(function (EvaluationPeriod $period) use ($user): array {
+        $periods = $user ? EvaluationPeriod::with('form:id,name,version,description,scale_min,scale_max')->where('school_year', $user->school_year)->whereIn('status', ['open', 'closed', 'released'])->orderByDesc('id')->get()->map(function (EvaluationPeriod $period) use ($user): array {
             $submitted = Evaluation::where('student_id', $user->id)->where('evaluation_period_id', $period->id)->pluck('teacher_id');
 
-            return [...$period->only(['id', 'name', 'status', 'school_year', 'opens_at', 'closes_at']), 'is_open' => $period->isOpen(), 'form' => $period->form->only(['name', 'description', 'scale_min', 'scale_max']), 'assignments' => $user->eligibleAssignments($period)->with('teacher:id,name')->orderBy('teacher_id')->get()->unique('teacher_id')->values()->map(fn (TeacherAssignment $assignment): array => ['id' => $assignment->id, 'teacher' => $assignment->teacher->name, 'submitted' => $submitted->contains($assignment->teacher_id)])];
+            return [...$period->only(['id', 'name', 'status', 'school_year', 'opens_at', 'closes_at']), 'is_open' => $period->isOpen(), 'form' => $period->form->only(['name', 'version', 'description', 'scale_min', 'scale_max']), 'assignments' => $user->eligibleAssignments($period)->with('teacher:id,name')->orderBy('teacher_id')->get()->unique('teacher_id')->values()->map(fn (TeacherAssignment $assignment): array => ['id' => $assignment->id, 'teacher' => $assignment->teacher->name, 'submitted' => $submitted->contains($assignment->teacher_id)])];
         }) : collect();
 
         return Inertia::render('student/Evaluations', [
@@ -51,7 +51,7 @@ class EvaluationController extends Controller
             return to_route('evaluations.index')->with('success', 'You have already evaluated this teacher.');
         }
 
-        return Inertia::render('student/Evaluate', ['adminView' => $adminView, 'selectedStudent' => $student->only(['id', 'name']), 'period' => $period->only(['id', 'name', 'closes_at']), 'assignment' => ['id' => $assignment->id, 'teacher' => $assignment->teacher->name], 'form' => [...$period->form->only(['name', 'description', 'scale_min', 'scale_max']), 'criteria' => $period->form->criteria()->orderBy('position')->get(['id', 'prompt', 'weight'])]]);
+        return Inertia::render('student/Evaluate', ['adminView' => $adminView, 'selectedStudent' => $student->only(['id', 'name']), 'period' => $period->only(['id', 'name', 'closes_at']), 'assignment' => ['id' => $assignment->id, 'teacher' => $assignment->teacher->name], 'form' => [...$period->form->only(['name', 'version', 'description', 'scale_min', 'scale_max']), 'criteria' => $period->form->criteria()->orderBy('position')->get(['id', 'prompt', 'weight'])]]);
     }
 
     public function store(SubmitEvaluationRequest $request, EvaluationPeriod $period): RedirectResponse

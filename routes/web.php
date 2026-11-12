@@ -31,6 +31,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('assignments', TeacherAssignmentController::class)->only(['index', 'store', 'update'])->middleware('can:assignments.manage');
     Route::patch('assignments/{assignment}/status', [TeacherAssignmentController::class, 'status'])->name('assignments.status')->middleware('can:assignments.manage');
     Route::resource('forms', EvaluationFormController::class)->only(['index', 'store', 'update'])->middleware('can:forms.manage');
+    Route::patch('forms/{form}/status', [EvaluationFormController::class, 'status'])->name('forms.status')->middleware('can:forms.manage');
     Route::resource('periods', EvaluationPeriodController::class)->only(['index', 'store', 'update'])->middleware('can:periods.manage');
     Route::post('periods/{period}/transition', [EvaluationPeriodController::class, 'transition'])->name('periods.transition')->middleware('can:periods.manage');
     Route::get('reports', [ReportController::class, 'index'])->name('reports.index')->middleware('can:results.view-all');

@@ -39,9 +39,9 @@ class ReportController extends Controller
             $file = fopen('php://output', 'w');
             if ($file === false) {
                 return;
-            } fputcsv($file, ['Teacher', 'Evaluation period', 'School year', 'Status', 'Responses', 'Score', 'Maximum', 'Performance level'], ',', '"', '');
+            } fputcsv($file, ['Teacher', 'Evaluation period', 'School year', 'Status', 'Responses', 'Score', 'Maximum', 'Performance level', 'Template', 'Template version'], ',', '"', '');
             foreach ($results as $row) {
-                $values = [$row['teacher'], $row['period'], $row['school_year'], $row['status'], $row['count'], number_format($row['score'], 2), $row['scale_max'], $row['performance_level'] ?? 'Not configured'];
+                $values = [$row['teacher'], $row['period'], $row['school_year'], $row['status'], $row['count'], number_format($row['score'], 2), $row['scale_max'], $row['performance_level'] ?? 'Not configured', $row['template_name'], $row['template_version']];
                 $values = array_map(fn ($value): string => preg_match('/^[\s]*[=+@-]/u', (string) $value) ? "'".(string) $value : (string) $value, $values);
                 fputcsv($file, $values, ',', '"', '');
             } fclose($file);
