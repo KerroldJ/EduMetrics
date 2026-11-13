@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { Link, router } from '@inertiajs/vue3';
-import { LogOut, Settings } from '@lucide/vue';
+import { Link } from '@inertiajs/vue3';
+import { LogOut, Moon, Settings, Sun } from '@lucide/vue';
 import {
     DropdownMenuGroup,
     DropdownMenuItem,
@@ -8,7 +8,7 @@ import {
     DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import UserInfo from '@/components/UserInfo.vue';
-import { logout } from '@/routes';
+import { useAppearance } from '@/composables/useAppearance';
 import { edit } from '@/routes/profile';
 import type { User } from '@/types';
 
@@ -16,15 +16,14 @@ type Props = {
     user: User;
 };
 
-const handleLogout = () => {
-    if (!window.confirm('Log out of EduMetric?')) {
-        return;
-    }
-    router.flushAll();
-    router.post(logout.url());
+const { resolvedAppearance, updateAppearance } = useAppearance();
+
+const toggleAppearance = () => {
+    updateAppearance(resolvedAppearance.value === 'dark' ? 'light' : 'dark');
 };
 
 defineProps<Props>();
+const emit = defineEmits<{ logout: [] }>();
 </script>
 
 <template>
@@ -43,15 +42,23 @@ defineProps<Props>();
                     prefetch
                 >
                     <Settings class="mr-2 h-4 w-4" />
-                    Settings
+                    Update profile
                 </Link>
             </DropdownMenuItem>
         </DropdownMenuGroup>
+        <DropdownMenuItem class="cursor-pointer" @select="toggleAppearance">
+            <Sun
+                v-if="resolvedAppearance === 'dark'"
+                class="mr-2 h-4 w-4"
+                aria-hidden="true"
+            />
+            <Moon v-else class="mr-2 h-4 w-4" aria-hidden="true" />
+            {{ resolvedAppearance === 'dark' ? 'Light mode' : 'Dark mode' }}
+        </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuItem :as-child="true">
+        <DropdownMenuItem :as-child="true" @select="emit('logout')">
             <button
                 class="block w-full cursor-pointer"
-                @click="handleLogout"
                 type="button"
                 data-test="logout-button"
             >

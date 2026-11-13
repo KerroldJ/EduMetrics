@@ -39,7 +39,6 @@ defineOptions({
     },
 });
 type Criterion = { prompt: string; weight: number };
-type Band = { label: string; min: number; max: number };
 const props = defineProps<{
     forms: EvaluationForm[];
 }>();
@@ -98,11 +97,6 @@ function view(record: EvaluationForm) {
     selectedId.value = record.id;
     previewOpen.value = true;
 }
-function summary(description: string | null) {
-    const paragraph =
-        description?.split(/\n\s*\n/)[0] ?? 'No student instructions added.';
-    return paragraph.length > 150 ? paragraph.slice(0, 147) + '…' : paragraph;
-}
 function clearFilters() {
     query.value = '';
     availability.value = 'all';
@@ -119,7 +113,6 @@ const form = useForm({
     scale_min: 1,
     scale_max: 5,
     criteria: [{ prompt: '', weight: 1 }] as Criterion[],
-    performance_bands: [] as Band[],
 });
 function reset() {
     editing.value = null;
@@ -143,9 +136,6 @@ function edit(record: EvaluationForm, duplicate = false) {
     form.criteria = record.criteria.map((item) => ({
         prompt: item.prompt,
         weight: Number(item.weight),
-    }));
-    form.performance_bands = (record.performance_bands ?? []).map((band) => ({
-        ...band,
     }));
     dialogOpen.value = true;
 }
@@ -221,193 +211,210 @@ function submit() {
                     copied questions before saving. The next version number is
                     assigned automatically.
                 </p>
-                <form id="school-forms-form" @submit.prevent="submit">
-                    <fieldset :disabled="form.processing" class="grid gap-5">
-                        <div>
-                            <label for="name" class="school-label"
-                                >Template version name</label
-                            ><input
-                                id="name"
-                                v-model="form.name"
-                                class="school-input"
-                                required
-                            />
-                        </div>
-                        <div>
-                            <label for="description" class="school-label"
-                                >Instructions for students</label
-                            ><textarea
-                                id="description"
-                                v-model="form.description"
-                                class="school-input"
-                                rows="3"
-                            />
-                        </div>
-                        <div class="grid grid-cols-2 gap-4">
-                            <div>
-                                <label for="scale_min" class="school-label"
-                                    >Lowest rating</label
-                                ><input
-                                    id="scale_min"
-                                    v-model.number="form.scale_min"
-                                    type="number"
-                                    min="1"
-                                    max="9"
-                                    class="school-input"
+                <form
+                    id="school-forms-form"
+                    class="w-full min-w-0"
+                    @submit.prevent="submit"
+                >
+                    <fieldset
+                        :disabled="form.processing"
+                        class="flex min-w-0 flex-col gap-6"
+                    >
+                        <p class="text-xs text-slate-500 dark:text-slate-400">
+                            <span
+                                class="text-red-600 dark:text-red-400"
+                                aria-hidden="true"
+                                >*</span
+                            >
+                            Required fields
+                        </p>
+                        <section
+                            class="flex min-w-0 flex-col gap-4"
+                            aria-labelledby="template-details-heading"
+                        >
+                            <h2
+                                id="template-details-heading"
+                                class="font-semibold"
+                            >
+                                Template details
+                            </h2>
+                            <div class="min-w-0">
+                                <label for="name" class="school-label"
+                                    >Template version name
+                                    <span
+                                        class="text-red-600 dark:text-red-400"
+                                        aria-hidden="true"
+                                        >*</span
+                                    ></label
+                                >
+                                <input
+                                    id="name"
+                                    v-model="form.name"
+                                    class="school-input min-w-0"
+                                    placeholder="e.g. Grade 11–12 Teacher Feedback"
                                     required
                                 />
                             </div>
-                            <div>
-                                <label for="scale_max" class="school-label"
-                                    >Highest rating</label
-                                ><input
-                                    id="scale_max"
-                                    v-model.number="form.scale_max"
-                                    type="number"
-                                    min="2"
-                                    max="10"
-                                    class="school-input"
-                                    required
+                            <div class="min-w-0">
+                                <label for="description" class="school-label"
+                                    >Instructions for students
+                                    <span
+                                        class="font-normal text-slate-500 dark:text-slate-400"
+                                        >(optional)</span
+                                    ></label
+                                >
+                                <textarea
+                                    id="description"
+                                    v-model="form.description"
+                                    class="school-input min-w-0 resize-y"
+                                    rows="3"
+                                    placeholder="e.g. Rate each statement based on your classroom experience during this semester."
                                 />
                             </div>
-                        </div>
-                        <fieldset class="grid gap-3">
-                            <legend class="mb-3 font-medium">
+                        </section>
+                        <section
+                            class="flex min-w-0 flex-col gap-4 border-t border-slate-100 pt-5 dark:border-slate-800"
+                            aria-labelledby="rating-scale-heading"
+                        >
+                            <h2 id="rating-scale-heading" class="font-semibold">
+                                Rating scale
+                            </h2>
+                            <div
+                                class="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2"
+                            >
+                                <div class="min-w-0">
+                                    <label for="scale_min" class="school-label"
+                                        >Lowest rating
+                                        <span
+                                            class="text-red-600 dark:text-red-400"
+                                            aria-hidden="true"
+                                            >*</span
+                                        ></label
+                                    >
+                                    <input
+                                        id="scale_min"
+                                        v-model.number="form.scale_min"
+                                        type="number"
+                                        min="1"
+                                        max="9"
+                                        class="school-input min-w-0"
+                                        placeholder="e.g. 1"
+                                        required
+                                    />
+                                </div>
+                                <div class="min-w-0">
+                                    <label for="scale_max" class="school-label"
+                                        >Highest rating
+                                        <span
+                                            class="text-red-600 dark:text-red-400"
+                                            aria-hidden="true"
+                                            >*</span
+                                        ></label
+                                    >
+                                    <input
+                                        id="scale_max"
+                                        v-model.number="form.scale_max"
+                                        type="number"
+                                        min="2"
+                                        max="10"
+                                        class="school-input min-w-0"
+                                        placeholder="e.g. 5"
+                                        required
+                                    />
+                                </div>
+                            </div>
+                        </section>
+                        <section
+                            class="flex min-w-0 flex-col gap-3 border-t border-slate-100 pt-5 dark:border-slate-800"
+                            aria-labelledby="questions-heading"
+                        >
+                            <h2 id="questions-heading" class="font-semibold">
                                 Questions and weights
-                            </legend>
+                            </h2>
                             <div
                                 v-for="(criterion, index) in form.criteria"
                                 :key="index"
-                                class="rounded-lg border p-3"
+                                class="flex min-w-0 flex-col gap-3 rounded-lg border border-slate-200 bg-slate-50/50 p-4 dark:border-slate-800 dark:bg-slate-950/30"
                             >
-                                <label
-                                    :for="'question-' + index"
-                                    class="school-label"
-                                    >Question {{ index + 1 }}</label
-                                ><textarea
+                                <div
+                                    class="flex flex-wrap items-center justify-between gap-2"
+                                >
+                                    <label
+                                        :for="'question-' + index"
+                                        class="text-sm font-medium"
+                                        >Question {{ index + 1 }}
+                                        <span
+                                            class="text-red-600 dark:text-red-400"
+                                            aria-hidden="true"
+                                            >*</span
+                                        ></label
+                                    >
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        type="button"
+                                        :aria-label="
+                                            'Remove question ' + (index + 1)
+                                        "
+                                        :disabled="form.criteria.length === 1"
+                                        @click="form.criteria.splice(index, 1)"
+                                        >Remove</Button
+                                    >
+                                </div>
+                                <textarea
                                     :id="'question-' + index"
                                     v-model="criterion.prompt"
-                                    class="school-input"
+                                    class="school-input min-w-0 resize-y"
                                     rows="2"
-                                    placeholder="Enter the school’s approved evaluation question"
+                                    placeholder="e.g. The teacher explains lessons clearly and answers our questions."
                                     required
                                 />
-                                <div class="mt-3 flex items-end gap-3">
-                                    <div class="flex-1">
+                                <div class="flex flex-wrap items-end gap-3">
+                                    <div class="w-full min-w-0 sm:w-32">
                                         <label
                                             :for="'weight-' + index"
                                             class="school-label"
-                                            >Weight</label
-                                        ><input
+                                            >Weight
+                                            <span
+                                                class="text-red-600 dark:text-red-400"
+                                                aria-hidden="true"
+                                                >*</span
+                                            ></label
+                                        >
+                                        <input
                                             :id="'weight-' + index"
                                             v-model.number="criterion.weight"
                                             type="number"
                                             min="0.01"
                                             max="1000"
                                             step="0.01"
-                                            class="school-input"
+                                            class="school-input min-w-0"
+                                            placeholder="e.g. 1"
                                             required
                                         />
                                     </div>
-                                    <Button
-                                        variant="ghost"
-                                        type="button"
-                                        :disabled="form.criteria.length === 1"
-                                        @click="form.criteria.splice(index, 1)"
-                                        >Remove</Button
+                                    <p
+                                        class="min-w-0 flex-1 text-xs leading-5 text-slate-500 dark:text-slate-400"
                                     >
+                                        Use the same weight for equally
+                                        important questions.
+                                    </p>
                                 </div>
                             </div>
                             <Button
                                 variant="outline"
                                 type="button"
+                                class="w-full"
                                 @click="
                                     form.criteria.push({
                                         prompt: '',
                                         weight: 1,
                                     })
                                 "
-                                >Add question</Button
+                                ><Plus class="size-4" aria-hidden="true" />Add
+                                question</Button
                             >
-                        </fieldset>
-                        <fieldset class="grid gap-3">
-                            <legend class="mb-2 font-medium">
-                                Performance bands (optional)
-                            </legend>
-                            <p class="text-xs leading-5 text-slate-500">
-                                Scores use a weighted mean, displayed to two
-                                decimal places. Add the school’s approved,
-                                non-overlapping score ranges. Without bands,
-                                reports show numeric scores only.
-                            </p>
-                            <div
-                                v-for="(band, index) in form.performance_bands"
-                                :key="index"
-                                class="grid gap-3 rounded-lg border p-3 sm:grid-cols-3"
-                            >
-                                <div class="sm:col-span-3">
-                                    <label
-                                        :for="'band-label-' + index"
-                                        class="school-label"
-                                        >Performance label</label
-                                    ><input
-                                        :id="'band-label-' + index"
-                                        v-model="band.label"
-                                        class="school-input"
-                                        required
-                                    />
-                                </div>
-                                <div>
-                                    <label
-                                        :for="'band-min-' + index"
-                                        class="school-label"
-                                        >Minimum</label
-                                    ><input
-                                        :id="'band-min-' + index"
-                                        v-model.number="band.min"
-                                        type="number"
-                                        step="0.01"
-                                        class="school-input"
-                                        required
-                                    />
-                                </div>
-                                <div>
-                                    <label
-                                        :for="'band-max-' + index"
-                                        class="school-label"
-                                        >Maximum</label
-                                    ><input
-                                        :id="'band-max-' + index"
-                                        v-model.number="band.max"
-                                        type="number"
-                                        step="0.01"
-                                        class="school-input"
-                                        required
-                                    />
-                                </div>
-                                <Button
-                                    type="button"
-                                    variant="ghost"
-                                    class="self-end"
-                                    @click="
-                                        form.performance_bands.splice(index, 1)
-                                    "
-                                    >Remove</Button
-                                >
-                            </div>
-                            <Button
-                                type="button"
-                                variant="outline"
-                                @click="
-                                    form.performance_bands.push({
-                                        label: '',
-                                        min: form.scale_min,
-                                        max: form.scale_max,
-                                    })
-                                "
-                                >Add performance band</Button
-                            >
-                        </fieldset>
+                        </section>
                     </fieldset>
                 </form>
             </SchoolFormDialog>
@@ -476,33 +483,19 @@ function submit() {
                     :aria-labelledby="'template-title-' + record.id"
                     class="grid grid-cols-2 items-start gap-4 px-5 py-5 sm:grid-cols-4 xl:grid-cols-[minmax(0,1fr)_5rem_7rem_6rem_7rem_7rem]"
                 >
-                    <div
-                        class="col-span-2 flex min-w-0 items-start gap-3 sm:col-span-4 xl:col-span-1"
-                    >
-                        <div
-                            class="flex size-9 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-[#185b94] dark:bg-blue-950 dark:text-blue-300"
+                    <div class="col-span-2 min-w-0 sm:col-span-4 xl:col-span-1">
+                        <h2
+                            :id="'template-title-' + record.id"
+                            class="text-sm leading-6 font-semibold"
                         >
-                            <FileText class="size-4" aria-hidden="true" />
-                        </div>
-                        <div class="min-w-0">
-                            <h2
-                                :id="'template-title-' + record.id"
-                                class="text-sm leading-6 font-semibold"
+                            <button
+                                type="button"
+                                class="text-left outline-none hover:text-[#185b94] focus-visible:underline focus-visible:underline-offset-4 dark:hover:text-blue-300"
+                                @click="view(record)"
                             >
-                                <button
-                                    type="button"
-                                    class="text-left outline-none hover:text-[#185b94] focus-visible:underline focus-visible:underline-offset-4 dark:hover:text-blue-300"
-                                    @click="view(record)"
-                                >
-                                    {{ record.name }}
-                                </button>
-                            </h2>
-                            <p
-                                class="mt-1 line-clamp-1 text-xs leading-5 text-slate-500 dark:text-slate-400"
-                            >
-                                {{ summary(record.description) }}
-                            </p>
-                        </div>
+                                {{ record.name }}
+                            </button>
+                        </h2>
                     </div>
                     <dl>
                         <dt class="mb-1 text-xs text-slate-500 xl:sr-only">
@@ -513,11 +506,6 @@ function submit() {
                                 class="inline-flex rounded-md border border-slate-200 px-2 py-0.5 text-xs font-medium tabular-nums dark:border-slate-700"
                                 >v{{ record.version }}</span
                             >
-                            <p
-                                class="mt-1.5 text-xs text-slate-500 dark:text-slate-400"
-                            >
-                                {{ record.is_locked ? 'Locked' : 'Editable' }}
-                            </p>
                         </dd>
                     </dl>
                     <dl>

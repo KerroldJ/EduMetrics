@@ -23,11 +23,13 @@ Route::get('/', function (Request $request): RedirectResponse {
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', DashboardController::class)->name('dashboard');
     Route::middleware('can:users.manage')->group(function (): void {
+        Route::patch('users/{user}/approve', [UserController::class, 'approve'])->name('users.approve');
         Route::resource('users', UserController::class)->only(['index', 'store', 'update']);
     });
     Route::resource('school-years', SchoolYearController::class)->only(['store', 'update', 'destroy'])->middleware('can:strands.manage');
     Route::resource('sections', SectionController::class)->only(['store', 'update', 'destroy'])->middleware('can:strands.manage');
-    Route::resource('strands', StrandController::class)->only(['index', 'store', 'update'])->middleware('can:strands.manage');
+    Route::get('strands', [StrandController::class, 'index'])->name('strands.index')->middleware(PermissionMiddleware::using(['strands.manage', 'assignments.manage']));
+    Route::resource('strands', StrandController::class)->only(['store', 'update'])->middleware('can:strands.manage');
     Route::resource('assignments', TeacherAssignmentController::class)->only(['index', 'store', 'update'])->middleware('can:assignments.manage');
     Route::patch('assignments/{assignment}/status', [TeacherAssignmentController::class, 'status'])->name('assignments.status')->middleware('can:assignments.manage');
     Route::resource('forms', EvaluationFormController::class)->only(['index', 'store', 'update'])->middleware('can:forms.manage');
@@ -36,6 +38,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('periods/{period}/transition', [EvaluationPeriodController::class, 'transition'])->name('periods.transition')->middleware('can:periods.manage');
     Route::get('reports', [ReportController::class, 'index'])->name('reports.index')->middleware('can:results.view-all');
     Route::get('reports/download', [ReportController::class, 'download'])->name('reports.download')->middleware('can:reports.download');
+    Route::get('reports/pdf', [ReportController::class, 'pdf'])->name('reports.pdf')->middleware('can:reports.download');
     Route::get('evaluations', [EvaluationController::class, 'index'])->name('evaluations.index')->middleware(PermissionMiddleware::using(['evaluations.submit', 'evaluations.monitor']));
     Route::get('evaluations/{period}/teachers/{assignment}', [EvaluationController::class, 'create'])->name('evaluations.create')->middleware(PermissionMiddleware::using(['evaluations.submit', 'evaluations.monitor']));
     Route::post('evaluations/{period}', [EvaluationController::class, 'store'])->name('evaluations.store')->middleware('can:evaluations.submit');

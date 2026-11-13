@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Form, Head } from '@inertiajs/vue3';
+import { ref } from 'vue';
 import InputError from '@/components/InputError.vue';
 import PasswordInput from '@/components/PasswordInput.vue';
 import TextLink from '@/components/TextLink.vue';
@@ -12,13 +13,17 @@ import { store } from '@/routes/register';
 
 defineProps<{
     passwordRules: string;
+    strands: { id: number; code: string; name: string }[];
+    sections: { id: number; name: string }[];
 }>();
+
+const role = ref('');
 
 defineOptions({
     layout: {
         title: 'Create your account',
         description:
-            'Join your school community on EduMetric. Enter your details to get started.',
+            'Register as a teacher or student. Your school administrator will review your account before you can sign in.',
     },
 });
 </script>
@@ -31,9 +36,9 @@ defineOptions({
             v-bind="store.form()"
             :reset-on-success="['password', 'password_confirmation']"
             v-slot="{ errors, processing }"
-            class="flex flex-col gap-5"
+            class="flex flex-col gap-4"
         >
-            <div class="grid gap-2">
+            <div class="flex flex-col gap-2">
                 <Label for="name">Full name</Label>
                 <Input
                     id="name"
@@ -50,7 +55,7 @@ defineOptions({
                 <InputError id="name-error" :message="errors.name" />
             </div>
 
-            <div class="grid gap-2">
+            <div class="flex flex-col gap-2">
                 <Label for="email">Email address</Label>
                 <Input
                     id="email"
@@ -66,10 +71,101 @@ defineOptions({
                 <InputError id="email-error" :message="errors.email" />
             </div>
 
-            <div class="grid gap-2">
+            <div class="flex flex-col gap-2">
+                <Label for="role">Register as</Label>
+                <select
+                    id="role"
+                    v-model="role"
+                    name="role"
+                    required
+                    class="school-input h-11"
+                    :aria-invalid="!!errors.role"
+                    :aria-describedby="errors.role ? 'role-error' : undefined"
+                >
+                    <option value="" disabled>Select a role</option>
+                    <option value="Teacher">Teacher</option>
+                    <option value="Student">Student</option>
+                </select>
+                <InputError id="role-error" :message="errors.role" />
+            </div>
+
+            <div class="flex flex-col gap-2">
+                <Label for="strand_id">Strand</Label>
+                <select
+                    id="strand_id"
+                    name="strand_id"
+                    required
+                    class="school-input h-11"
+                    :aria-invalid="!!errors.strand_id"
+                    :aria-describedby="
+                        errors.strand_id ? 'strand-error' : undefined
+                    "
+                >
+                    <option value="" selected disabled>Select a strand</option>
+                    <option
+                        v-for="strand in strands"
+                        :key="strand.id"
+                        :value="strand.id"
+                    >
+                        {{ strand.code }} — {{ strand.name }}
+                    </option>
+                </select>
+                <InputError id="strand-error" :message="errors.strand_id" />
+            </div>
+
+            <div class="flex flex-col gap-2">
+                <Label for="section">Section</Label>
+                <select
+                    id="section"
+                    name="section"
+                    required
+                    class="school-input h-11"
+                    :aria-invalid="!!errors.section"
+                    :aria-describedby="
+                        errors.section ? 'section-error' : undefined
+                    "
+                >
+                    <option value="" selected disabled>Select a section</option>
+                    <option
+                        v-for="section in sections"
+                        :key="section.id"
+                        :value="section.name"
+                    >
+                        {{ section.name }}
+                    </option>
+                </select>
+                <InputError id="section-error" :message="errors.section" />
+            </div>
+
+            <div v-if="role === 'Student'" class="flex flex-col gap-2">
+                <Label for="grade_level">Grade level</Label>
+                <select
+                    id="grade_level"
+                    name="grade_level"
+                    required
+                    class="school-input h-11"
+                    :aria-invalid="!!errors.grade_level"
+                    :aria-describedby="
+                        errors.grade_level ? 'grade-level-error' : undefined
+                    "
+                >
+                    <option value="" selected disabled>
+                        Select a grade level
+                    </option>
+                    <option :value="11">Grade 11</option>
+                    <option :value="12">Grade 12</option>
+                </select>
+                <InputError
+                    id="grade-level-error"
+                    :message="errors.grade_level"
+                />
+            </div>
+
+            <div class="flex flex-col gap-2">
                 <Label for="password">Password</Label>
                 <PasswordInput
                     id="password"
+                    :autofocus="false"
                     required
                     autocomplete="new-password"
                     name="password"
@@ -84,10 +180,11 @@ defineOptions({
                 <InputError id="password-error" :message="errors.password" />
             </div>
 
-            <div class="grid gap-2">
+            <div class="flex flex-col gap-2">
                 <Label for="password_confirmation">Confirm password</Label>
                 <PasswordInput
                     id="password_confirmation"
+                    :autofocus="false"
                     required
                     autocomplete="new-password"
                     name="password_confirmation"
@@ -114,11 +211,11 @@ defineOptions({
                 data-test="register-user-button"
             >
                 <Spinner v-if="processing" />
-                {{ processing ? 'Creating account...' : 'Create account' }}
+                {{ processing ? 'Submitting...' : 'Submit for approval' }}
             </Button>
 
             <p
-                class="border-t border-slate-100 pt-5 text-center text-sm text-slate-600 dark:border-slate-800 dark:text-slate-400"
+                class="border-t border-slate-100 pt-4 text-center text-sm text-slate-600 dark:border-slate-800 dark:text-slate-400"
             >
                 Already have an account?
                 <TextLink

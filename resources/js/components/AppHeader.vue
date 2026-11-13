@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
 import { ChevronDown, Menu } from '@lucide/vue';
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import AppLogo from '@/components/AppLogo.vue';
 import Breadcrumbs from '@/components/Breadcrumbs.vue';
+import LogoutDialog from '@/components/LogoutDialog.vue';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
@@ -34,10 +35,16 @@ const page = usePage();
 const auth = computed(() => page.props.auth);
 const { isCurrentUrl } = useCurrentUrl();
 const navigationGroups = useSchoolNavigationGroups();
+const logoutDialogOpen = ref(false);
+function preserveDialogFocus(event: Event) {
+    if (logoutDialogOpen.value) event.preventDefault();
+}
 </script>
 
 <template>
-    <div class="print:hidden">
+    <div
+        class="sticky top-0 z-20 bg-background/95 backdrop-blur-xs print:hidden"
+    >
         <div class="border-b border-sidebar-border/80">
             <div class="mx-auto flex h-16 items-center gap-4 px-4 md:max-w-7xl">
                 <div class="lg:hidden">
@@ -164,6 +171,7 @@ const navigationGroups = useSchoolNavigationGroups();
                             size="icon"
                             class="ml-auto rounded-full"
                             aria-label="Open account menu"
+                            id="header-account-menu-trigger"
                         >
                             <Avatar class="size-8">
                                 <AvatarImage
@@ -177,10 +185,21 @@ const navigationGroups = useSchoolNavigationGroups();
                             </Avatar>
                         </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" class="w-56">
-                        <UserMenuContent :user="auth.user" />
+                    <DropdownMenuContent
+                        align="end"
+                        class="w-56"
+                        @close-auto-focus="preserveDialogFocus"
+                    >
+                        <UserMenuContent
+                            :user="auth.user"
+                            @logout="logoutDialogOpen = true"
+                        />
                     </DropdownMenuContent>
                 </DropdownMenu>
+                <LogoutDialog
+                    v-model:open="logoutDialogOpen"
+                    return-focus-id="header-account-menu-trigger"
+                />
             </div>
         </div>
         <div

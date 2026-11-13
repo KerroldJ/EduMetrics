@@ -20,7 +20,6 @@ function templatePayload(array $overrides = []): array
         'scale_max' => 5,
         'is_active' => true,
         'criteria' => [['prompt' => 'Explains clearly', 'weight' => 2]],
-        'performance_bands' => [['label' => 'Original performance', 'min' => 1, 'max' => 5]],
     ], ...$overrides];
 }
 
@@ -100,12 +99,11 @@ test('the latest unused version can be corrected without changing its lineage', 
     expect($latest->fresh()->version)->toBe(2);
 });
 
-test('new template versions preserve existing questionnaires responses scores and performance bands', function () {
+test('new template versions preserve existing questionnaires responses and numeric scores', function () {
     extract(templateEvaluationScenario());
-    $form->update(['performance_bands' => [['label' => 'Original band', 'min' => 1, 'max' => 5]]]);
     $this->actingAs($student)->post(route('evaluations.store', $period), ['assignment_id' => $assignment->id, 'ratings' => [$first->id => 4, $second->id => 1]])->assertSessionHasNoErrors();
 
-    $this->actingAs($admin)->post(route('forms.store'), templatePayload(['source_form_id' => $form->id, 'scale_max' => 10, 'criteria' => [['prompt' => 'Different question', 'weight' => 10]], 'performance_bands' => [['label' => 'New band', 'min' => 1, 'max' => 10]]]))->assertSessionHasNoErrors();
+    $this->actingAs($admin)->post(route('forms.store'), templatePayload(['source_form_id' => $form->id, 'scale_max' => 10, 'criteria' => [['prompt' => 'Different question', 'weight' => 10]]]))->assertSessionHasNoErrors();
     $new = EvaluationForm::latest('id')->firstOrFail();
     $this->post(route('periods.store'), periodPayload($new))->assertSessionHasNoErrors();
     expect(EvaluationPeriod::latest('id')->firstOrFail()->evaluation_form_id)->toBe($new->id);
@@ -114,11 +112,11 @@ test('new template versions preserve existing questionnaires responses scores an
     expect(Evaluation::firstOrFail()->responses()->orderBy('evaluation_criterion_id')->pluck('evaluation_criterion_id')->all())->toBe([$first->id, $second->id]);
 
     $this->get(route('evaluations.create', ['period' => $period, 'assignment' => $assignment, 'student_id' => $student->id]))->assertInertia(fn (Assert $page) => $page->has('form.criteria', 2)->where('form.criteria.0.prompt', 'Clear explanations')->where('form.scale_max', 5)->where('form.version', 1));
-    $this->get(route('reports.index', ['period' => $period->id, 'teacher' => $teacher->id]))->assertInertia(fn (Assert $page) => $page->has('results', 1)->where('results.0.score', 3)->where('results.0.template_version', 1)->where('results.0.scale_max', 5)->where('results.0.performance_level', 'Original band')->where('results.0.criteria.0.prompt', 'Clear explanations')->where('results.0.criteria.0.average', 4));
-    $download = $this->get(route('reports.download', ['period' => $period->id, 'teacher' => $teacher->id]))->assertOk()->assertDownload();
+    $this->get(route('reports.index', ['period' => $period->id]))->assertInertia(fn (Assert $page) => $page->has('results', 1)->where('results.0.score', 3)->where('results.0.template_version', 1)->where('results.0.scale_max', 5)->missing('results.0.performance_level')->where('results.0.criteria.0.prompt', 'Clear explanations')->where('results.0.criteria.0.average', 4));
+    $download = $this->get(route('reports.download', ['period' => $period->id]))->assertOk()->assertDownload();
     expect($download->streamedContent())->toContain('Template,"Template version"')->toContain($form->name);
     $period->update(['status' => 'released']);
-    $this->actingAs($teacher)->get(route('results.index'))->assertInertia(fn (Assert $page) => $page->where('results.0.template_version', 1)->where('results.0.score', 3)->where('results.0.performance_level', 'Original band'));
+    $this->actingAs($teacher)->get(route('results.index'))->assertInertia(fn (Assert $page) => $page->where('results.0.template_version', 1)->where('results.0.score', 3)->missing('results.0.performance_level'));
 });
 
 test('retiring a pinned version preserves draft editing and opening', function () {

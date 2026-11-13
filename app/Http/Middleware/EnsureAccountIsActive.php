@@ -11,12 +11,15 @@ class EnsureAccountIsActive
 {
     public function handle(Request $request, Closure $next): Response
     {
-        if ($request->user() && ! $request->user()->is_active) {
+        $user = $request->user();
+        if ($user && (! $user->is_active || ! $user->is_approved)) {
             Auth::guard('web')->logout();
             $request->session()->invalidate();
             $request->session()->regenerateToken();
 
-            return redirect()->route('login')->withErrors(['email' => 'Your account is inactive. Contact your school administrator.']);
+            return redirect()->route('login')->withErrors(['email' => ! $user->is_active
+                ? 'Your account is inactive. Contact your school administrator.'
+                : 'Your account is awaiting administrator approval.']);
         }
 
         return $next($request);

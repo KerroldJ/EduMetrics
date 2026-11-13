@@ -18,7 +18,12 @@ class ProfileUpdateRequest extends FormRequest
      */
     public function rules(): array
     {
-        return $this->profileRules($this->user()->id);
+        return [
+            ...$this->profileRules($this->user()->id),
+            'mobile' => ['nullable', 'regex:/^\+639[0-9]{9}$/'],
+            'photo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:2048', 'dimensions:max_width=4000,max_height=4000'],
+            'remove_photo' => ['sometimes', 'boolean'],
+        ];
     }
 
     protected function prepareForValidation(): void

@@ -12,7 +12,7 @@ use Database\Seeders\EvaluationTemplateSeeder;
 
 function availableTemplateData(): array
 {
-    return ['name' => 'School questionnaire', 'description' => 'Rate observed classroom practices.', 'scale_min' => 1, 'scale_max' => 5, 'criteria' => [['prompt' => 'Explains clearly', 'weight' => 1]], 'performance_bands' => []];
+    return ['name' => 'School questionnaire', 'description' => 'Rate observed classroom practices.', 'scale_min' => 1, 'scale_max' => 5, 'criteria' => [['prompt' => 'Explains clearly', 'weight' => 1]]];
 }
 
 test('the starter template provides a complete grade eleven and twelve learner feedback instrument', function () {
@@ -97,7 +97,7 @@ test('new versions of retired templates are available without changing the retir
     expect($original->fresh()->is_active)->toBeFalse();
 });
 
-test('seeded rating bands classify two decimal report scores at every cutoff', function (float $score, string $label) {
+test('starter template summaries keep numeric scores rounded to two decimal places', function (float $score, float $expected) {
     $this->seed(EvaluationTemplateSeeder::class);
     $form = EvaluationForm::sole();
     SchoolYear::factory()->create(['name' => '2026-2027']);
@@ -107,17 +107,18 @@ test('seeded rating bands classify two decimal report scores at every cutoff', f
 
     $result = Evaluation::summaries($period->id)[0];
 
-    expect($result['performance_level'])->toBe($label);
+    expect($result['score'])->toBe($expected);
+    expect($result)->not->toHaveKey('performance_level');
     expect($result['scale_max'])->toBe(5);
 })->with([
-    'minimum' => [1.0, 'Poor'],
-    'below unsatisfactory' => [1.49, 'Poor'],
-    'unsatisfactory' => [1.5, 'Unsatisfactory'],
-    'below satisfactory' => [2.49, 'Unsatisfactory'],
-    'satisfactory' => [2.5, 'Satisfactory'],
-    'below very satisfactory' => [3.49, 'Satisfactory'],
-    'very satisfactory' => [3.5, 'Very Satisfactory'],
-    'below outstanding' => [4.49, 'Very Satisfactory'],
-    'outstanding' => [4.5, 'Outstanding'],
-    'maximum' => [5.0, 'Outstanding'],
+    'minimum' => [1.0, 1.0],
+    'round down near one' => [1.494, 1.49],
+    'round up near one' => [1.496, 1.5],
+    'round down near two' => [2.494, 2.49],
+    'round up near two' => [2.496, 2.5],
+    'round down near three' => [3.494, 3.49],
+    'round up near three' => [3.496, 3.5],
+    'round down near four' => [4.494, 4.49],
+    'round up near four' => [4.496, 4.5],
+    'maximum' => [5.0, 5.0],
 ]);

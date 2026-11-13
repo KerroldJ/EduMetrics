@@ -48,13 +48,6 @@ class EvaluationFormController extends Controller
     private function save(SaveEvaluationFormRequest $request, ?EvaluationForm $form = null): void
     {
         $data = $request->validated();
-        $bands = collect($request->performanceBands())->sortBy('min')->values();
-        foreach ($bands as $index => $band) {
-            if ($band['min'] > $band['max'] || ($index > 0 && $band['min'] <= $bands[$index - 1]['max'])) {
-                throw ValidationException::withMessages(['performance_bands' => 'Performance ranges must be ordered, valid, and non-overlapping.']);
-            }
-        }
-
         DB::transaction(function () use ($form, $data): void {
             if ($form) {
                 EvaluationForm::whereKey($form->template_id ?? $form->id)->lockForUpdate()->firstOrFail();

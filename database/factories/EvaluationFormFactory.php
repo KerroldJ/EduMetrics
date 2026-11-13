@@ -10,6 +10,6 @@ class EvaluationFormFactory extends Factory
 {
     public function definition(): array
     {
-        return ['name' => fake()->sentence(3), 'scale_min' => 1, 'scale_max' => 5, 'performance_bands' => [], 'is_active' => true];
+        return ['name' => fake()->sentence(3), 'scale_min' => 1, 'scale_max' => 5, 'is_active' => true];
     }
 }

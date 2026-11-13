@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { usePage } from '@inertiajs/vue3';
 import { ChevronsUpDown } from '@lucide/vue';
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
+import LogoutDialog from '@/components/LogoutDialog.vue';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -19,6 +20,10 @@ import UserMenuContent from '@/components/UserMenuContent.vue';
 const page = usePage();
 const user = computed(() => page.props.auth.user);
 const { isMobile, state } = useSidebar();
+const logoutDialogOpen = ref(false);
+function preserveDialogFocus(event: Event) {
+    if (logoutDialogOpen.value) event.preventDefault();
+}
 </script>
 
 <template>
@@ -27,6 +32,7 @@ const { isMobile, state } = useSidebar();
             <DropdownMenu>
                 <DropdownMenuTrigger as-child>
                     <SidebarMenuButton
+                        id="sidebar-account-menu-trigger"
                         size="lg"
                         class="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
                         data-test="sidebar-menu-button"
@@ -46,10 +52,18 @@ const { isMobile, state } = useSidebar();
                     "
                     align="end"
                     :side-offset="4"
+                    @close-auto-focus="preserveDialogFocus"
                 >
-                    <UserMenuContent :user="user" />
+                    <UserMenuContent
+                        :user="user"
+                        @logout="logoutDialogOpen = true"
+                    />
                 </DropdownMenuContent>
             </DropdownMenu>
+            <LogoutDialog
+                v-model:open="logoutDialogOpen"
+                return-focus-id="sidebar-account-menu-trigger"
+            />
         </SidebarMenuItem>
     </SidebarMenu>
 </template>

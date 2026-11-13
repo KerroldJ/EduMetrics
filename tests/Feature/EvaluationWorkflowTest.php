@@ -84,14 +84,15 @@ test('administrators can configure forms assignments and periods through real en
     $teacher = User::where('email', 'teacher@edumetric.test')->firstOrFail();
     $strand = Strand::factory()->create();
     $this->actingAs($admin)->post(route('assignments.store'), ['teacher_id' => $teacher->id, 'strand_id' => $strand->id, 'school_year' => '2026-2027', 'grade_level' => 11, 'section' => 'A', 'is_active' => true])->assertSessionHasNoErrors();
-    $this->actingAs($admin)->post(route('forms.store'), ['name' => 'School instrument', 'scale_min' => 1, 'scale_max' => 5, 'is_active' => true, 'criteria' => [['prompt' => 'Clear instruction', 'weight' => 2], ['prompt' => 'Helpful feedback', 'weight' => 1]], 'performance_bands' => [['label' => 'Approved test band', 'min' => 1, 'max' => 5]]])->assertSessionHasNoErrors();
+    $this->actingAs($admin)->post(route('forms.store'), ['name' => 'School instrument', 'scale_min' => 1, 'scale_max' => 5, 'is_active' => true, 'criteria' => [['prompt' => 'Clear instruction', 'weight' => 2], ['prompt' => 'Helpful feedback', 'weight' => 1]]])->assertSessionHasNoErrors();
     $form = EvaluationForm::firstOrFail();
     $this->actingAs($admin)->post(route('periods.store'), ['name' => 'First semester', 'school_year' => '2026-2027', 'evaluation_form_id' => $form->id, 'opens_at' => now()->subHour()->toIso8601String(), 'closes_at' => now()->addDay()->toIso8601String(), 'minimum_responses' => 3])->assertSessionHasNoErrors();
     $period = EvaluationPeriod::firstOrFail();
     expect($period->status)->toBe('draft');
     $this->actingAs($admin)->post(route('periods.transition', $period), ['action' => 'open'])->assertSessionHasNoErrors();
     expect($period->fresh()->isOpen())->toBeTrue();
-    foreach (['users.index', 'strands.index', 'assignments.index', 'forms.index', 'periods.index', 'reports.index'] as $route) {
+    $this->actingAs($admin)->get(route('strands.index', ['tab' => 'assignments']))->assertOk()->assertInertia(fn (Assert $page) => $page->where('activeTab', 'assignments')->has('assignments.data', 1));
+    foreach (['users.index', 'strands.index', 'forms.index', 'periods.index', 'reports.index'] as $route) {
         $this->actingAs($admin)->get(route($route))->assertOk();
     }
 });
@@ -125,7 +126,7 @@ test('incomplete and foreign question keys never save a partial evaluation', fun
 
 test('referenced school accounts cannot be deleted through settings', function () {
     extract(evaluationScenario());
-    $this->actingAs($teacher)->delete(route('profile.destroy'), ['password' => 'password'])->assertSessionHasErrors('password');
+    $this->actingAs($teacher)->delete('/settings/profile', ['password' => 'password'])->assertMethodNotAllowed();
     $this->assertModelExists($teacher);
 });
 
@@ -148,9 +149,9 @@ test('administrators can open both evaluation portals and select a student', fun
     extract(evaluationScenario());
 
     $this->actingAs($admin)->get(route('evaluations.index'))->assertOk()->assertInertia(fn (Assert $page) => $page
-        ->component('student/Evaluations')->where('adminView', true)->has('students', 1)->where('students.0.id', $student->id)->where('selectedStudent', null)->has('periods', 0));
+        ->component('student/Evaluations')->where('adminView', true)->has('students', 1)->where('students.0.id', $student->id)->where('selectedStudent', null)->has('teachers', 0));
     $this->get(route('evaluations.index', ['student_id' => $student->id]))->assertOk()->assertInertia(fn (Assert $page) => $page
-        ->where('selectedStudent.id', $student->id)->where('strand.id', $strand->id)->has('periods', 1)->where('periods.0.assignments.0.id', $assignment->id));
+        ->where('selectedStudent.id', $student->id)->where('strand.id', $strand->id)->has('teachers', 1)->where('teachers.0.assignment_id', $assignment->id));
     $this->get(route('results.index'))->assertOk()->assertInertia(fn (Assert $page) => $page
         ->component('faculty/Results')->where('adminView', true)->has('teachers', 1)->where('selectedTeacher', null)->has('results', 0));
 });
@@ -190,7 +191,7 @@ test('administrator teacher previews match released results and privacy threshol
 test('student and teacher portals remain scoped to the signed in account', function () {
     extract(evaluationScenario());
 
-    $this->actingAs($student)->get(route('evaluations.index'))->assertOk()->assertInertia(fn (Assert $page) => $page->where('adminView', false)->has('students', 0)->where('periods.0.assignments.0.id', $assignment->id));
+    $this->actingAs($student)->get(route('evaluations.index'))->assertOk()->assertInertia(fn (Assert $page) => $page->where('adminView', false)->has('students', 0)->where('teachers.0.assignment_id', $assignment->id));
     $this->get(route('evaluations.create', ['period' => $period->id, 'assignment' => $assignment->id]))->assertOk()->assertInertia(fn (Assert $page) => $page->where('adminView', false)->has('form.criteria', 2));
     $this->get(route('evaluations.index', ['student_id' => $admin->id]))->assertForbidden();
     $this->get(route('evaluations.create', ['period' => $period->id, 'assignment' => $assignment->id, 'student_id' => $admin->id]))->assertForbidden();

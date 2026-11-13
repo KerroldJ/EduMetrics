@@ -37,7 +37,7 @@ test('school year renames keep enrollment assignments and evaluation periods ali
     expect($student->fresh()->school_year)->toBe('2027-2028');
     expect($assignment->fresh()->school_year)->toBe('2027-2028');
     expect($period->fresh()->school_year)->toBe('2027-2028');
-    $this->actingAs($student->fresh())->get(route('evaluations.index'))->assertInertia(fn (Assert $page) => $page->where('periods.0.assignments.0.id', $assignment->id));
+    $this->actingAs($student->fresh())->get(route('evaluations.index'))->assertInertia(fn (Assert $page) => $page->where('teachers.0.assignment_id', $assignment->id));
 });
 
 test('school years referenced by enrollment assignments or periods cannot be deleted', function (string $usage) {
@@ -63,7 +63,7 @@ test('teacher assignments only accept school years from the managed dropdown', f
     $strand = Strand::factory()->create();
     $data = ['teacher_id' => $teacher->id, 'strand_id' => $strand->id, 'school_year' => '2030-2031', 'is_active' => true];
 
-    $this->actingAs($admin)->get(route('assignments.index'))->assertInertia(fn (Assert $page) => $page->where('schoolYears.0.name', '2026-2027'));
+    $this->actingAs($admin)->get(route('strands.index', ['tab' => 'assignments']))->assertInertia(fn (Assert $page) => $page->where('assignmentOptions.schoolYears.0.name', '2026-2027'));
     $this->post(route('assignments.store'), $data)->assertSessionHasErrors('school_year');
     $this->assertDatabaseCount('teacher_assignments', 0);
     $this->post(route('assignments.store'), [...$data, 'school_year' => $year->name])->assertSessionHasNoErrors();

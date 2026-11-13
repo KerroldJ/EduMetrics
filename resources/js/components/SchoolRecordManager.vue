@@ -1,14 +1,18 @@
 <script setup lang="ts">
 import { router, useForm } from '@inertiajs/vue3';
 import { Plus } from '@lucide/vue';
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import FormErrors from '@/components/FormErrors.vue';
 import PaginationLinks from '@/components/PaginationLinks.vue';
 import PasswordInput from '@/components/PasswordInput.vue';
+import ProfilePhotoPicker from '@/components/ProfilePhotoPicker.vue';
 import SchoolFormDialog from '@/components/SchoolFormDialog.vue';
 import SchoolYearPicker from '@/components/SchoolYearPicker.vue';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
+import { useInitials } from '@/composables/useInitials';
 import type { Field, PageLink, RecordData } from '@/types/school';
+const { getInitials } = useInitials();
 const props = defineProps<{
     fields: Field[];
     records: RecordData[];
@@ -20,6 +24,7 @@ const props = defineProps<{
     searchUrl?: string;
     initialSearch?: string;
     singleColumn?: boolean;
+    profilePhoto?: boolean;
 }>();
 const initial = Object.fromEntries(
     props.fields.map((field) => [
@@ -38,6 +43,16 @@ const visibleFields = computed(() =>
 );
 const editing = ref<number | null>(null);
 const dialogOpen = ref(false);
+const selectedPhoto = ref<File | null>(null);
+const removePhoto = ref(false);
+const currentAvatar = ref<string | null>(null);
+watch(dialogOpen, (open) => {
+    if (!open) {
+        selectedPhoto.value = null;
+        removePhoto.value = false;
+        currentAvatar.value = null;
+    }
+});
 const formId = `school-record-${props.noun.replaceAll(' ', '-')}`;
 const query = ref(props.initialSearch ?? '');
 const formTitle = computed(() =>
@@ -45,6 +60,9 @@ const formTitle = computed(() =>
 );
 function reset() {
     editing.value = null;
+    selectedPhoto.value = null;
+    removePhoto.value = false;
+    currentAvatar.value = null;
     form.defaults({ ...initial });
     form.reset();
     form.clearErrors();
@@ -56,6 +74,8 @@ function create() {
 function edit(record: RecordData) {
     reset();
     editing.value = record.id;
+    currentAvatar.value =
+        typeof record.avatar === 'string' ? record.avatar : null;
     props.fields.forEach((field) => {
         form[field.key] =
             field.type === 'password'
@@ -66,8 +86,17 @@ function edit(record: RecordData) {
     dialogOpen.value = true;
 }
 function submit() {
+    if (form.processing) return;
+    const uploadingPhoto = props.profilePhoto && selectedPhoto.value !== null;
+    form.transform((data) => ({
+        ...data,
+        ...(props.profilePhoto
+            ? { photo: selectedPhoto.value, remove_photo: removePhoto.value }
+            : {}),
+        ...(uploadingPhoto && editing.value ? { _method: 'put' } : {}),
+    }));
     form.submit(
-        editing.value ? 'put' : 'post',
+        uploadingPhoto ? 'post' : editing.value ? 'put' : 'post',
         editing.value ? props.updateUrl(editing.value) : props.storeUrl,
         {
             preserveScroll: true,
@@ -150,6 +179,25 @@ function search() {
                                   : 'grid'
                         "
                     >
+                        <ProfilePhotoPicker
+                            v-if="profilePhoto"
+                            :id="formId + '-photo'"
+                            v-model="selectedPhoto"
+                            v-model:removed="removePhoto"
+                            :current-photo="currentAvatar"
+                            :name="
+                                typeof form.name === 'string' ? form.name : ''
+                            "
+                            :error="form.errors.photo"
+                            class="sm:col-span-full"
+                        />
+                        <p
+                            v-if="profilePhoto && form.progress"
+                            role="status"
+                            class="text-sm text-slate-500 sm:col-span-full"
+                        >
+                            Uploading photo… {{ form.progress.percentage }}%
+                        </p>
                         <div
                             v-for="field in visibleFields"
                             :key="field.key"
@@ -192,7 +240,12 @@ function search() {
                                         Boolean(form.errors[field.key])
                                     "
                                 >
-                                    <option value="">Select an option</option>
+                                    <option value="">
+                                        {{
+                                            field.emptyLabel ??
+                                            'Select an option'
+                                        }}
+                                    </option>
                                     <option
                                         v-for="option in field.options"
                                         :key="option.value"
@@ -252,7 +305,39 @@ function search() {
                 <tbody>
                     <tr v-for="record in records" :key="record.id">
                         <td v-for="column in columns" :key="column.key">
-                            {{ display(record[column.key]) }}
+                            <div
+                                v-if="profilePhoto && column.key === 'name'"
+                                class="flex items-center gap-3"
+                            >
+                                <Avatar
+                                    class="size-9 rounded-full"
+                                    aria-hidden="true"
+                                >
+                                    <AvatarImage
+                                        v-if="
+                                            typeof record.avatar === 'string' &&
+                                            record.avatar
+                                        "
+                                        :src="record.avatar"
+                                        alt=""
+                                    />
+                                    <AvatarFallback
+                                        class="rounded-full text-xs font-medium text-slate-700 dark:text-slate-200"
+                                    >
+                                        {{
+                                            getInitials(
+                                                String(record.name ?? ''),
+                                            )
+                                        }}
+                                    </AvatarFallback>
+                                </Avatar>
+                                <span class="font-medium">{{
+                                    display(record.name)
+                                }}</span>
+                            </div>
+                            <template v-else>{{
+                                display(record[column.key])
+                            }}</template>
                         </td>
                         <td>
                             <div class="flex flex-wrap gap-2">

@@ -18,5 +18,8 @@ class DatabaseSeeder extends Seeder
             ? DemoAccountSeeder::class
             : RolePermissionSeeder::class);
         $this->call([StrandSeeder::class, SectionSeeder::class, SchoolYearSeeder::class, EvaluationTemplateSeeder::class]);
+        if (app()->environment(['local', 'testing'])) {
+            $this->call(DemoSchoolPopulationSeeder::class);
+        }
     }
 }

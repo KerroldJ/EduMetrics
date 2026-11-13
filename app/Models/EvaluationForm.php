@@ -9,8 +9,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-/** @property array<int, array{label: string, min: float|int|numeric-string, max: float|int|numeric-string}>|null $performance_bands */
-#[Fillable(['name', 'description', 'scale_min', 'scale_max', 'performance_bands', 'is_active'])]
+#[Fillable(['name', 'description', 'scale_min', 'scale_max', 'is_active'])]
 class EvaluationForm extends Model
 {
     /** @use HasFactory<EvaluationFormFactory> */
@@ -19,7 +18,7 @@ class EvaluationForm extends Model
     /** @return array<string, string> */
     protected function casts(): array
     {
-        return ['scale_min' => 'integer', 'scale_max' => 'integer', 'performance_bands' => 'array', 'is_active' => 'boolean', 'version' => 'integer'];
+        return ['scale_min' => 'integer', 'scale_max' => 'integer', 'is_active' => 'boolean', 'version' => 'integer'];
     }
 
     /** @return BelongsTo<EvaluationForm, $this> */

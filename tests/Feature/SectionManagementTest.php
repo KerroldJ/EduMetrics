@@ -41,7 +41,7 @@ test('section renames keep student enrollment and teacher eligibility connected'
 
     expect($student->fresh()->section)->toBe('Renamed');
     expect($assignment->fresh()->section)->toBe('Renamed');
-    $this->actingAs($student->fresh())->get(route('evaluations.index'))->assertInertia(fn (Assert $page) => $page->where('enrollment.section', 'Renamed')->where('periods.0.assignments.0.id', $assignment->id));
+    $this->actingAs($student->fresh())->get(route('evaluations.index'))->assertInertia(fn (Assert $page) => $page->where('enrollment.section', 'Renamed')->where('teachers.0.assignment_id', $assignment->id));
 });
 
 test('sections used by accounts or assignments cannot be deleted', function (string $usage) {
@@ -82,7 +82,7 @@ test('teacher assignments use the managed section list and allow all sections', 
     $section = Section::factory()->create();
     $data = ['teacher_id' => $teacher->id, 'strand_id' => $strand->id, 'school_year' => '2026-2027', 'section' => 'Unknown', 'is_active' => true];
 
-    $this->actingAs($admin)->get(route('assignments.index'))->assertInertia(fn (Assert $page) => $page->where('sections.0.name', $section->name));
+    $this->actingAs($admin)->get(route('strands.index', ['tab' => 'assignments']))->assertInertia(fn (Assert $page) => $page->where('assignmentOptions.sections.0.name', $section->name));
     $this->post(route('assignments.store'), $data)->assertSessionHasErrors('section');
     $this->assertDatabaseCount('teacher_assignments', 0);
     $this->post(route('assignments.store'), [...$data, 'section' => $section->name])->assertSessionHasNoErrors();

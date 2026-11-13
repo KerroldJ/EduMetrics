@@ -24,17 +24,31 @@ class EvaluationController extends Controller
     {
         $adminView = $request->user()->can('evaluations.monitor');
         $user = $this->studentForView($request);
-        $periods = $user ? EvaluationPeriod::with('form:id,name,version,description,scale_min,scale_max')->where('school_year', $user->school_year)->whereIn('status', ['open', 'closed', 'released'])->orderByDesc('id')->get()->map(function (EvaluationPeriod $period) use ($user): array {
-            $submitted = Evaluation::where('student_id', $user->id)->where('evaluation_period_id', $period->id)->pluck('teacher_id');
-
-            return [...$period->only(['id', 'name', 'status', 'school_year', 'opens_at', 'closes_at']), 'is_open' => $period->isOpen(), 'form' => $period->form->only(['name', 'version', 'description', 'scale_min', 'scale_max']), 'assignments' => $user->eligibleAssignments($period)->with('teacher:id,name')->orderBy('teacher_id')->get()->unique('teacher_id')->values()->map(fn (TeacherAssignment $assignment): array => ['id' => $assignment->id, 'teacher' => $assignment->teacher->name, 'submitted' => $submitted->contains($assignment->teacher_id)])];
-        }) : collect();
+        $teachers = [];
+        if ($user) {
+            $periods = EvaluationPeriod::where('school_year', $user->school_year)
+                ->where('status', 'open')->where('opens_at', '<=', now())->where('closes_at', '>', now())
+                ->whereNotNull('evaluation_form_id')->orderByDesc('id')->get(['id', 'name']);
+            $submitted = Evaluation::where('student_id', $user->id)->whereIn('evaluation_period_id', $periods->modelKeys())
+                ->get(['teacher_id', 'evaluation_period_id'])->keyBy(fn (Evaluation $evaluation): string => $evaluation->teacher_id.':'.$evaluation->evaluation_period_id);
+            $teachers = $user->eligibleAssignments()->with('teacher:id,name')->orderBy('id')->get()
+                ->unique('teacher_id')->sortBy('teacher.name')->values()->map(fn (TeacherAssignment $assignment): array => [
+                    'id' => (int) $assignment->teacher_id,
+                    'name' => $assignment->teacher->name,
+                    'assignment_id' => (int) $assignment->id,
+                    'evaluations' => $periods->map(fn (EvaluationPeriod $period): array => [
+                        'period_id' => $period->id,
+                        'period' => $period->name,
+                        'submitted' => $submitted->has($assignment->teacher_id.':'.$period->id),
+                    ])->all(),
+                ])->all();
+        }
 
         return Inertia::render('student/Evaluations', [
             'adminView' => $adminView,
             'students' => $adminView ? User::role('Student')->orderBy('name')->get(['id', 'name', 'school_id']) : [],
             'selectedStudent' => $user?->only(['id', 'name']),
-            'periods' => $periods,
+            'teachers' => $teachers,
             'strand' => $user?->strand?->only(['id', 'name', 'code']),
             'enrollment' => $user?->only(['school_year', 'grade_level', 'section']) ?? ['school_year' => null, 'grade_level' => null, 'section' => null],
         ]);

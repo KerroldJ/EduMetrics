@@ -47,7 +47,6 @@ type TemplateVersion = {
     scale_max: number;
     is_active: boolean;
     criteria: { id: number; prompt: string; weight: string }[];
-    performance_bands: { label: string; min: number; max: number }[] | null;
 };
 const props = defineProps<{
     periods: Period[];

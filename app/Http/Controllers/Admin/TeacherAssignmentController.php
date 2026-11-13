@@ -5,38 +5,32 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Admin\SaveTeacherAssignmentRequest;
 use App\Models\Evaluation;
-use App\Models\SchoolYear;
-use App\Models\Section;
-use App\Models\Strand;
 use App\Models\TeacherAssignment;
 use App\Models\User;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
-use Inertia\Inertia;
-use Inertia\Response;
 
 class TeacherAssignmentController extends Controller
 {
-    public function index(): Response
+    public function index(Request $request): RedirectResponse
     {
-        return Inertia::render('admin/Assignments', ['assignments' => TeacherAssignment::with(['teacher:id,name', 'strand:id,name,code'])->orderByDesc('id')->paginate(20), 'teachers' => User::where('is_active', true)->whereHas('roles', fn (Builder $query): Builder => $query->where('name', 'Teacher'))->orderBy('name')->get(['id', 'name']), 'strands' => Strand::where('is_active', true)->orderBy('code')->get(['id', 'code', 'name']), 'sections' => Section::orderBy('name')->get(['id', 'name']), 'schoolYears' => SchoolYear::orderByDesc('name')->get(['id', 'name'])]);
+        return to_route('strands.index', [...$request->query(), 'tab' => 'assignments']);
     }
 
     public function store(SaveTeacherAssignmentRequest $request): RedirectResponse
     {
         $this->save($request);
 
-        return to_route('assignments.index')->with('success', 'Teacher assigned.');
+        return to_route('strands.index', ['tab' => 'assignments'])->with('success', 'Teacher assigned.');
     }
 
     public function update(SaveTeacherAssignmentRequest $request, TeacherAssignment $assignment): RedirectResponse
     {
         $this->save($request, $assignment);
 
-        return to_route('assignments.index')->with('success', 'Assignment updated.');
+        return to_route('strands.index', ['tab' => 'assignments'])->with('success', 'Assignment updated.');
     }
 
     private function save(SaveTeacherAssignmentRequest $request, ?TeacherAssignment $assignment = null): void
@@ -66,6 +60,6 @@ class TeacherAssignmentController extends Controller
             $assignment->update(['is_active' => $request->boolean('is_active')]);
         });
 
-        return to_route('assignments.index')->with('success', 'Assignment status updated.');
+        return to_route('strands.index', ['tab' => 'assignments'])->with('success', 'Assignment status updated.');
     }
 }

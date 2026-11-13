@@ -1,8 +1,18 @@
 <script setup lang="ts">
 import { Link, useForm } from '@inertiajs/vue3';
+import { ref, shallowRef } from 'vue';
 import SchoolPage from '@/components/SchoolPage.vue';
 import FormErrors from '@/components/FormErrors.vue';
 import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import { Spinner } from '@/components/ui/spinner';
 import { dashboard } from '@/routes';
 import { index, store } from '@/routes/evaluations';
 defineOptions({
@@ -53,15 +63,41 @@ const ratings = Array.from(
     { length: props.form.scale_max - props.form.scale_min + 1 },
     (_, index) => props.form.scale_min + index,
 );
-function submit() {
-    if (props.adminView) return;
-    if (
-        !window.confirm(
-            'Submit your final evaluation? You cannot change your answers after submission.',
-        )
-    )
+const confirmationOpen = ref(false);
+const previousFocus = shallowRef<HTMLElement | null>(null);
+function requestSubmission() {
+    if (props.adminView || answers.processing || confirmationOpen.value) return;
+    if (typeof document !== 'undefined') {
+        previousFocus.value =
+            document.activeElement instanceof HTMLElement
+                ? document.activeElement
+                : null;
+    }
+    confirmationOpen.value = true;
+}
+function updateConfirmation(open: boolean) {
+    if (!answers.processing) confirmationOpen.value = open;
+}
+function preventDismissWhileSubmitting(event: Event) {
+    if (answers.processing) event.preventDefault();
+}
+function restoreFocus(event: Event) {
+    if (previousFocus.value?.isConnected) {
+        event.preventDefault();
+        previousFocus.value.focus({ preventScroll: true });
+    }
+}
+function confirmSubmission() {
+    if (props.adminView || answers.processing || !confirmationOpen.value)
         return;
-    answers.post(store.url(props.period.id));
+    answers.post(store.url(props.period.id), {
+        onSuccess: () => {
+            confirmationOpen.value = false;
+        },
+        onError: () => {
+            confirmationOpen.value = false;
+        },
+    });
 }
 </script>
 <template>
@@ -81,7 +117,7 @@ function submit() {
                                 : {},
                         })
                     "
-                    >Back to evaluations</Link
+                    >Back to teachers</Link
                 ></Button
             ></template
         >
@@ -96,7 +132,7 @@ function submit() {
         </p>
         <form
             class="mx-auto grid w-full max-w-3xl gap-5"
-            @submit.prevent="submit"
+            @submit.prevent="requestSubmission"
         >
             <section class="school-panel">
                 <h2 class="font-semibold">Before you begin</h2>
@@ -127,7 +163,7 @@ function submit() {
             <fieldset
                 v-for="(criterion, questionIndex) in form.criteria"
                 :key="criterion.id"
-                :disabled="adminView"
+                :disabled="adminView || answers.processing"
                 class="school-panel"
             >
                 <legend class="sr-only">
@@ -165,7 +201,7 @@ function submit() {
                 ><textarea
                     id="comment"
                     v-model="answers.comment"
-                    :disabled="adminView"
+                    :disabled="adminView || answers.processing"
                     rows="4"
                     maxlength="2000"
                     class="school-input"
@@ -186,6 +222,58 @@ function submit() {
                         : 'Submit final evaluation'
                 }}</Button
             >
-        </form></SchoolPage
-    >
+        </form>
+        <Dialog
+            v-if="!adminView"
+            :open="confirmationOpen"
+            @update:open="updateConfirmation"
+        >
+            <DialogContent
+                :show-close-button="!answers.processing"
+                class="sm:max-w-md"
+                @escape-key-down="preventDismissWhileSubmitting"
+                @interact-outside="preventDismissWhileSubmitting"
+                @close-auto-focus="restoreFocus"
+            >
+                <DialogHeader>
+                    <DialogTitle>Submit your evaluation?</DialogTitle>
+                    <DialogDescription
+                        >Your answers will be final. You cannot edit them after
+                        submission.</DialogDescription
+                    >
+                </DialogHeader>
+                <div
+                    class="rounded-lg border border-slate-200 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-900"
+                >
+                    <p class="text-sm font-semibold">
+                        {{ assignment.teacher }}
+                    </p>
+                    <p class="mt-1 text-xs text-slate-500 dark:text-slate-400">
+                        {{ period.name }}
+                    </p>
+                </div>
+                <DialogFooter>
+                    <Button
+                        type="button"
+                        variant="outline"
+                        :disabled="answers.processing"
+                        @click="updateConfirmation(false)"
+                        >Review answers</Button
+                    >
+                    <Button
+                        type="button"
+                        class="bg-[#185b94] text-white hover:bg-[#104675] dark:bg-blue-500 dark:hover:bg-blue-600"
+                        :disabled="answers.processing"
+                        @click="confirmSubmission"
+                    >
+                        <Spinner v-if="answers.processing" />{{
+                            answers.processing
+                                ? 'Submitting…'
+                                : 'Submit evaluation'
+                        }}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    </SchoolPage>
 </template>

@@ -22,7 +22,7 @@ function scheduledPeriodData(): array
 
 function independentTemplateData(): array
 {
-    return ['name' => 'Teaching questionnaire', 'description' => 'Rate each practice.', 'scale_min' => 1, 'scale_max' => 5, 'is_active' => true, 'criteria' => [['prompt' => 'Explains clearly', 'weight' => 1]], 'performance_bands' => []];
+    return ['name' => 'Teaching questionnaire', 'description' => 'Rate each practice.', 'scale_min' => 1, 'scale_max' => 5, 'is_active' => true, 'criteria' => [['prompt' => 'Explains clearly', 'weight' => 1]]];
 }
 
 test('administrators create a template first then assign it when creating a period', function () {

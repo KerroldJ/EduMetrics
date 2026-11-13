@@ -3,7 +3,6 @@ import {
     CalendarDays,
     ClipboardList,
     FileText,
-    GraduationCap,
     LayoutGrid,
     School,
     Users,
@@ -12,7 +11,6 @@ import { computed } from 'vue';
 import { dashboard } from '@/routes';
 import { index as users } from '@/routes/users';
 import { index as strands } from '@/routes/strands';
-import { index as assignments } from '@/routes/assignments';
 import { index as forms } from '@/routes/forms';
 import { index as periods } from '@/routes/periods';
 import { index as reports } from '@/routes/reports';
@@ -100,19 +98,16 @@ export function useSchoolNavigationGroups() {
                             title: 'Configuration',
                             href: strands(),
                             icon: School,
-                            permission: 'strands.manage',
+                            anyPermissions: [
+                                'strands.manage',
+                                'assignments.manage',
+                            ],
                         },
                         {
                             title: 'User Management',
                             href: users(),
                             icon: Users,
                             permission: 'users.manage',
-                        },
-                        {
-                            title: 'Teacher assignments',
-                            href: assignments(),
-                            icon: GraduationCap,
-                            permission: 'assignments.manage',
                         },
                         {
                             title: 'Reports and results',

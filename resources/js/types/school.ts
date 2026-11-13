@@ -13,6 +13,7 @@ export type Field = {
         | 'hidden';
     required?: boolean;
     options?: Option[];
+    emptyLabel?: string;
     hint?: string;
     default?: string | number | boolean | null;
     fullWidth?: boolean;
@@ -38,7 +39,6 @@ export type EvaluationTemplate = {
         status: string;
     }[];
     criteria: { prompt: string; weight: number | string }[];
-    performance_bands: { label: string; min: number; max: number }[] | null;
 };
 export type Results = {
     teacher_id: number;
@@ -52,7 +52,6 @@ export type Results = {
     template_name: string;
     template_version: number;
     scale_max: number;
-    performance_level: string | null;
     criteria: { prompt: string; average: number }[];
     comments: string[];
 };

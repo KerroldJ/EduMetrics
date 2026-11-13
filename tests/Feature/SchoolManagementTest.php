@@ -5,17 +5,42 @@ use App\Models\Section;
 use App\Models\Strand;
 use App\Models\User;
 use Database\Seeders\DemoAccountSeeder;
+use Inertia\Testing\AssertableInertia as Assert;
 
 test('administrators can create school accounts and strands', function () {
     Section::factory()->create(['name' => 'A']);
     SchoolYear::factory()->create(['name' => '2026-2027']);
     $this->seed(DemoAccountSeeder::class);
     $admin = User::where('email', 'admin@edumetric.test')->firstOrFail();
-    $this->actingAs($admin)->post(route('strands.store'), ['name' => 'Science and Technology', 'code' => 'STEM', 'is_active' => true])->assertSessionHasNoErrors()->assertRedirect();
+    $this->actingAs($admin)->post(route('strands.store'), ['name' => 'Science and Technology', 'code' => 'STEM', 'is_active' => true])->assertSessionHasNoErrors()->assertRedirectToRoute('strands.index', ['tab' => 'strands']);
     $strand = Strand::where('code', 'STEM')->firstOrFail();
     $this->actingAs($admin)->post(route('users.store'), ['name' => 'New Student', 'email' => 'new@student.test', 'password' => 'SchoolPassword123!', 'password_confirmation' => 'SchoolPassword123!', 'role' => 'Student', 'strand_id' => $strand->id, 'school_year' => '2026-2027', 'grade_level' => 11, 'section' => 'A', 'is_active' => true])->assertSessionHasNoErrors()->assertRedirect();
     $student = User::where('email', 'new@student.test')->firstOrFail();
     expect($student->hasRole('Student'))->toBeTrue()->and($student->strand_id)->toBe($strand->id);
+});
+
+test('configuration opens school years first and preserves explicitly selected tabs', function (?string $tab, string $expected) {
+    $this->seed(DemoAccountSeeder::class);
+    $admin = User::where('email', 'admin@edumetric.test')->firstOrFail();
+
+    $this->actingAs($admin)->get(route('strands.index', $tab ? ['tab' => $tab] : []))->assertOk()->assertInertia(fn (Assert $page) => $page
+        ->component('admin/Strands')->where('activeTab', $expected));
+})->with([
+    'default' => [null, 'school-years'],
+    'school years' => ['school-years', 'school-years'],
+    'strands' => ['strands', 'strands'],
+    'sections' => ['sections', 'sections'],
+]);
+
+test('saving a strand returns to the strands tab', function () {
+    $this->seed(DemoAccountSeeder::class);
+    $admin = User::where('email', 'admin@edumetric.test')->firstOrFail();
+    $strand = Strand::factory()->create();
+
+    $this->actingAs($admin)->put(route('strands.update', $strand), ['code' => $strand->code, 'name' => 'Updated strand', 'is_active' => true])
+        ->assertSessionHasNoErrors()->assertRedirectToRoute('strands.index', ['tab' => 'strands']);
+
+    expect($strand->fresh()->name)->toBe('Updated strand');
 });
 
 test('students cannot enter administrative modules', function () {
@@ -60,7 +85,7 @@ test('admin account updates reject case variants of another account email', func
 test('the sole admin cannot bypass protection through account settings deletion', function () {
     $this->seed(DemoAccountSeeder::class);
     $admin = User::where('email', 'admin@edumetric.test')->firstOrFail();
-    $this->actingAs($admin)->delete(route('profile.destroy'), ['password' => 'password'])->assertSessionHasErrors('password');
+    $this->actingAs($admin)->delete('/settings/profile', ['password' => 'password'])->assertMethodNotAllowed();
     $this->assertModelExists($admin);
 });
 

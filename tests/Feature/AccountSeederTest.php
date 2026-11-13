@@ -42,11 +42,11 @@ test('repeated seeding preserves existing passwords and does not duplicate accou
     $this->seed(DatabaseSeeder::class);
     $this->seed(DatabaseSeeder::class);
 
-    $this->assertDatabaseCount('users', 3);
+    $this->assertDatabaseCount('users', 39);
     $this->assertDatabaseCount('roles', 3);
     $this->assertDatabaseCount('sections', 4);
     $this->assertDatabaseCount('permissions', 14);
-    $this->assertDatabaseCount('model_has_roles', 3);
+    $this->assertDatabaseCount('model_has_roles', 39);
 
     expect($user->fresh()->password)->toBe($originalPassword)
         ->and($user->fresh()->hasRole('Admin'))->toBeTrue();

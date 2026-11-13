@@ -1,35 +1,22 @@
 <?php
 
 use App\Models\User;
-use Inertia\Testing\AssertableInertia as Assert;
-use Laravel\Fortify\Features;
 
-beforeEach(function () {
-    $this->skipUnlessFortifyHas(Features::twoFactorAuthentication());
-});
+test('two factor challenge endpoints are unavailable', function (string $method) {
+    $this->call($method, '/two-factor-challenge')->assertNotFound();
+})->with(['GET', 'POST']);
 
-test('two factor challenge redirects to login when not authenticated', function () {
-    $response = $this->get(route('two-factor.login'));
-
-    $response->assertRedirect(route('login'));
-});
-
-test('two factor challenge can be rendered', function () {
-    Features::twoFactorAuthentication([
-        'confirm' => true,
-        'confirmPassword' => true,
-    ]);
-
-    $user = User::factory()->withTwoFactor()->create();
-
-    $this->post(route('login'), [
-        'email' => $user->email,
-        'password' => 'password',
-    ]);
-
-    $this->get(route('two-factor.login'))
-        ->assertOk()
-        ->assertInertia(fn (Assert $page) => $page
-            ->component('auth/TwoFactorChallenge'),
-        );
-});
+test('two factor management endpoints are unavailable', function (string $method, string $path) {
+    $this->actingAs(User::factory()->create())
+        ->withSession(['auth.password_confirmed_at' => time()])
+        ->call($method, $path)
+        ->assertNotFound();
+})->with([
+    'enable' => ['POST', '/user/two-factor-authentication'],
+    'disable' => ['DELETE', '/user/two-factor-authentication'],
+    'confirm' => ['POST', '/user/confirmed-two-factor-authentication'],
+    'QR code' => ['GET', '/user/two-factor-qr-code'],
+    'secret key' => ['GET', '/user/two-factor-secret-key'],
+    'recovery codes' => ['GET', '/user/two-factor-recovery-codes'],
+    'regenerate recovery codes' => ['POST', '/user/two-factor-recovery-codes'],
+]);

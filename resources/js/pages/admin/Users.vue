@@ -1,9 +1,11 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { useForm } from '@inertiajs/vue3';
+import { computed, ref } from 'vue';
 import SchoolPage from '@/components/SchoolPage.vue';
 import SchoolRecordManager from '@/components/SchoolRecordManager.vue';
+import { Button } from '@/components/ui/button';
 import { dashboard } from '@/routes';
-import { index, store, update } from '@/routes/users';
+import { approve, index, store, update } from '@/routes/users';
 import type { Field, PageLink, RecordData } from '@/types/school';
 
 defineOptions({
@@ -20,7 +22,39 @@ const props = defineProps<{
     strands: { id: number; name: string; code: string }[];
     filters: { q?: string };
     sections: { id: number; name: string }[];
+    schoolYears: { id: number; name: string }[];
 }>();
+const approval = useForm({});
+const approvingUserId = ref<number | null>(null);
+const records = computed(() =>
+    props.users.data.map((user) => ({
+        ...user,
+        approval_status: user.is_approved ? 'Approved' : 'Pending',
+        enrollment: [
+            props.strands.find((strand) => strand.id === user.strand_id)?.code,
+            user.grade_level ? `Grade ${user.grade_level}` : null,
+            user.section,
+            user.school_year,
+        ]
+            .filter(Boolean)
+            .join(' · '),
+    })),
+);
+
+function approveUser(id: number) {
+    if (approval.processing) {
+        return;
+    }
+
+    approvingUserId.value = id;
+    approval.patch(approve.url(id), {
+        preserveScroll: true,
+        onFinish: () => {
+            approvingUserId.value = null;
+        },
+    });
+}
+
 const fields = computed<Field[]>(() => [
     {
         key: 'role',
@@ -42,9 +76,8 @@ const fields = computed<Field[]>(() => [
     },
     {
         key: 'strand_id',
-        label: 'Student strand',
+        label: 'Strand',
         type: 'select',
-        visibleWhen: { key: 'role', value: 'Student' },
         options: props.strands.map((strand) => ({
             value: strand.id,
             label: strand.code + ' — ' + strand.name,
@@ -53,7 +86,12 @@ const fields = computed<Field[]>(() => [
     {
         key: 'school_year',
         label: 'School year',
-        type: 'hidden',
+        type: 'select',
+        options: props.schoolYears.map((year) => ({
+            value: year.name,
+            label: year.name,
+        })),
+        hint: 'Evaluations are shown only for the selected school year. Manage years in Configuration.',
     },
     {
         key: 'grade_level',
@@ -73,8 +111,7 @@ const fields = computed<Field[]>(() => [
             value: section.name,
             label: section.name,
         })),
-        hint: 'Manage available sections in Strands and Sections.',
-        visibleWhen: { key: 'role', value: 'Student' },
+        hint: 'Manage available sections in Configuration.',
     },
     {
         key: 'password',
@@ -105,15 +142,17 @@ const fields = computed<Field[]>(() => [
 <template>
     <SchoolPage
         title="User Management"
-        description="Create school accounts, assign access, and record student enrollment. Deactivate accounts to preserve evaluation history."
+        description="Review pending registrations, approve school accounts, and manage access and enrollment."
         ><SchoolRecordManager
             :fields="fields"
-            :records="users.data"
+            :records="records"
             :links="users.links"
             :columns="[
                 { key: 'name', label: 'Name' },
                 { key: 'email', label: 'Email' },
                 { key: 'role', label: 'Role' },
+                { key: 'enrollment', label: 'School details' },
+                { key: 'approval_status', label: 'Approval' },
                 { key: 'is_active', label: 'Status' },
             ]"
             :store-url="store.url()"
@@ -122,5 +161,23 @@ const fields = computed<Field[]>(() => [
             :initial-search="filters.q"
             noun="user"
             single-column
-    /></SchoolPage>
+            profile-photo
+        >
+            <template #actions="{ record }">
+                <Button
+                    v-if="!record.is_approved"
+                    size="sm"
+                    :disabled="approval.processing"
+                    :aria-label="`Approve ${record.name}`"
+                    @click="approveUser(record.id)"
+                >
+                    {{
+                        approvingUserId === record.id
+                            ? 'Approving...'
+                            : 'Approve'
+                    }}
+                </Button>
+            </template>
+        </SchoolRecordManager>
+    </SchoolPage>
 </template>

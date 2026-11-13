@@ -20,7 +20,7 @@ class EvaluationPeriodController extends Controller
 {
     public function index(): Response
     {
-        return Inertia::render('admin/Periods', ['periods' => EvaluationPeriod::with('form:id,name,version')->withCount('evaluations')->orderByDesc('id')->get(), 'forms' => EvaluationForm::with(['criteria' => fn ($query) => $query->orderBy('position')])->whereHas('criteria')->orderBy('name')->orderByDesc('version')->get(['id', 'name', 'version', 'description', 'scale_min', 'scale_max', 'performance_bands', 'is_active']), 'schoolYears' => SchoolYear::orderByDesc('name')->get(['id', 'name'])]);
+        return Inertia::render('admin/Periods', ['periods' => EvaluationPeriod::with('form:id,name,version')->withCount('evaluations')->orderByDesc('id')->get(), 'forms' => EvaluationForm::with(['criteria' => fn ($query) => $query->orderBy('position')])->whereHas('criteria')->orderBy('name')->orderByDesc('version')->get(['id', 'name', 'version', 'description', 'scale_min', 'scale_max', 'is_active']), 'schoolYears' => SchoolYear::orderByDesc('name')->get(['id', 'name'])]);
     }
 
     public function store(SaveEvaluationPeriodRequest $request): RedirectResponse

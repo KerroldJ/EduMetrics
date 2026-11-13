@@ -59,7 +59,7 @@ test('archived message history does not cause account deletion errors', function
         'status' => 'accepted', 'scheduled_at' => now(), 'created_at' => now(), 'updated_at' => now(),
     ]);
 
-    $this->actingAs($user)->delete(route('profile.destroy'), ['password' => 'password'])->assertSessionHasErrors('password');
+    $this->actingAs($user)->delete('/settings/profile', ['password' => 'password'])->assertMethodNotAllowed();
 
     $this->assertModelExists($user);
     $this->assertDatabaseHas('archived_sms_notifications', ['user_id' => $user->id, 'message' => 'Archived record']);

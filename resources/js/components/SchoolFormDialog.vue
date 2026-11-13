@@ -69,7 +69,7 @@ function restoreFocus(event: Event) {
         <component
             :is="drawer ? SheetContent : DialogContent"
             :show-close-button="!processing"
-            class="flex flex-col gap-0 overflow-hidden p-0 motion-reduce:animate-none"
+            class="flex min-w-0 flex-col gap-0 overflow-hidden p-0 motion-reduce:animate-none"
             :class="[
                 drawer ? 'h-dvh max-h-dvh w-full' : 'max-h-[calc(100dvh-2rem)]',
                 wide ? 'sm:max-w-3xl' : 'sm:max-w-lg',
@@ -79,20 +79,22 @@ function restoreFocus(event: Event) {
             @close-auto-focus="restoreFocus"
             @open-auto-focus="focusWithoutSelecting"
         >
-            <DialogHeader class="shrink-0 border-b px-6 py-5 pr-12 text-left">
+            <DialogHeader
+                class="min-w-0 shrink-0 border-b px-4 py-5 pr-12 text-left sm:px-6 sm:pr-12"
+            >
                 <DialogTitle>{{ title }}</DialogTitle>
                 <DialogDescription class="leading-6">{{
                     description
                 }}</DialogDescription>
             </DialogHeader>
             <div
-                class="min-h-0 overflow-y-auto px-6 py-5"
+                class="min-h-0 min-w-0 overflow-x-hidden overflow-y-auto overscroll-contain px-4 py-5 sm:px-6"
                 :class="drawer ? 'flex-1' : undefined"
             >
                 <slot />
             </div>
             <DialogFooter
-                class="shrink-0 border-t bg-slate-50 px-6 py-4 dark:bg-slate-900"
+                class="shrink-0 border-t bg-slate-50 px-4 py-4 sm:px-6 dark:bg-slate-900"
             >
                 <Button
                     type="button"

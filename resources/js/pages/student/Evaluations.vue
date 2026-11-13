@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { Link, useForm } from '@inertiajs/vue3';
-import { ref } from 'vue';
+import { Check, GraduationCap } from '@lucide/vue';
+import { computed, ref } from 'vue';
 import FormErrors from '@/components/FormErrors.vue';
 import SchoolPage from '@/components/SchoolPage.vue';
 import { Button } from '@/components/ui/button';
@@ -19,6 +20,17 @@ defineOptions({
         ],
     }),
 });
+type TeacherEvaluation = {
+    period_id: number;
+    period: string;
+    submitted: boolean;
+};
+type AssignedTeacher = {
+    id: number;
+    name: string;
+    assignment_id: number;
+    evaluations: TeacherEvaluation[];
+};
 const props = defineProps<{
     adminView: boolean;
     students: { id: number; name: string; school_id: string | null }[];
@@ -29,37 +41,54 @@ const props = defineProps<{
         grade_level: number | null;
         section: string | null;
     };
-    periods: {
-        id: number;
-        name: string;
-        status: string;
-        is_open: boolean;
-        opens_at: string;
-        closes_at: string;
-        form: { name: string; version: number; description: string | null };
-        assignments: { id: number; teacher: string; submitted: boolean }[];
-    }[];
+    teachers: AssignedTeacher[];
 }>();
-const selected = ref(props.strand?.id ?? '');
+const missingEnrollment = computed(() =>
+    [
+        !props.strand ? 'strand' : '',
+        !props.enrollment.school_year ? 'school year' : '',
+    ].filter(Boolean),
+);
+const selectedPeriods = ref<Partial<Record<number, number>>>({});
+const teacherRows = computed(() =>
+    props.teachers.map((teacher) => {
+        const choices = props.adminView
+            ? teacher.evaluations
+            : teacher.evaluations.filter((evaluation) => !evaluation.submitted);
+        return {
+            ...teacher,
+            choices,
+            activeEvaluation:
+                choices.find(
+                    (evaluation) =>
+                        evaluation.period_id ===
+                        selectedPeriods.value[teacher.id],
+                ) ??
+                choices[0] ??
+                null,
+            submitted:
+                teacher.evaluations.length > 0 &&
+                teacher.evaluations.every((evaluation) => evaluation.submitted),
+        };
+    }),
+);
 const selection = useForm({ student_id: props.selectedStudent?.id ?? '' });
 function viewStudent() {
     selection.get(index.url(), { preserveState: false, preserveScroll: true });
 }
-function display(value: string) {
-    return new Date(value).toLocaleString('en-PH', {
-        timeZone: 'Asia/Manila',
-        dateStyle: 'medium',
-        timeStyle: 'short',
-    });
+function choosePeriod(teacherId: number, event: Event) {
+    selectedPeriods.value[teacherId] = Number(
+        (event.target as HTMLSelectElement).value,
+    );
 }
 </script>
 <template>
     <SchoolPage
-        :title="adminView ? 'Student evaluations' : 'Teacher evaluations'"
+        :title="adminView ? 'Student evaluations' : 'My teachers'"
         :description="
             adminView
-                ? 'Select a student to see their available evaluations, assigned teachers, and submission status.'
-                : 'Evaluate only the teachers assigned to your recorded strand, school year, grade, and section. Each teacher can be evaluated once per period.'
+                ? 'Select a student to view their assigned teachers and preview available questionnaires.'
+                : 'Choose a teacher and select Evaluate to open the questionnaire.'
         "
     >
         <form
@@ -112,149 +141,177 @@ function display(value: string) {
         >
             Viewing evaluations for {{ selectedStudent.name }}
         </p>
-        <section v-if="!adminView || selectedStudent" class="school-panel">
-            <div class="grid gap-4 sm:grid-cols-2">
-                <div>
-                    <label for="strand" class="school-label"
-                        >Assigned strand</label
-                    ><select
-                        v-if="strand"
-                        id="strand"
-                        v-model="selected"
-                        class="school-input"
-                    >
-                        <option :value="strand.id">
-                            {{ strand.code }} — {{ strand.name }}
-                        </option>
-                    </select>
-                    <p
-                        v-else
-                        class="text-sm text-amber-700 dark:text-amber-300"
-                    >
-                        Your strand has not been recorded. Contact your school
-                        administrator.
-                    </p>
-                </div>
-                <div>
-                    <p class="school-label">Enrollment</p>
-                    <p class="text-sm text-slate-500">
-                        {{ enrollment.school_year ?? 'School year not assigned'
-                        }}<span v-if="enrollment.grade_level">
-                            · Grade {{ enrollment.grade_level }}</span
-                        ><span v-if="enrollment.section">
-                            · {{ enrollment.section }}</span
-                        >
-                    </p>
-                </div>
-            </div>
-        </section>
-        <section
-            v-for="period in periods"
-            :key="period.id"
-            class="school-panel"
-        >
-            <div class="flex flex-wrap justify-between gap-4">
-                <div>
-                    <h2 class="text-lg font-semibold">{{ period.name }}</h2>
-                    <p class="mt-1 text-sm text-slate-500">
-                        {{ period.form.name }} · v{{ period.form.version }}
-                    </p>
-                </div>
-                <span
-                    class="text-sm"
-                    :class="
-                        period.is_open
-                            ? 'text-emerald-700 dark:text-emerald-300'
-                            : 'text-slate-500'
-                    "
-                    >{{
-                        period.is_open
-                            ? 'Open for feedback'
-                            : period.status === 'open'
-                              ? 'Outside scheduled window'
-                              : period.status
-                    }}</span
-                >
-            </div>
-            <p class="mt-3 text-xs text-slate-500">
-                {{ display(period.opens_at) }} —
-                {{ display(period.closes_at) }} (Philippine time)
-            </p>
-            <p v-if="period.form.description" class="mt-3 text-sm leading-6">
-                {{ period.form.description }}
-            </p>
-            <ul class="mt-5 divide-y dark:divide-slate-800">
+        <section v-if="teachers.length" class="school-panel">
+            <header
+                class="mb-2 flex flex-wrap items-center justify-between gap-3"
+            >
+                <h2 class="font-semibold">Assigned teachers</h2>
+                <p class="text-xs text-slate-500 dark:text-slate-400">
+                    {{ teachers.length }}
+                    {{ teachers.length === 1 ? 'teacher' : 'teachers' }}
+                </p>
+            </header>
+            <ul class="divide-y divide-slate-100 dark:divide-slate-800">
                 <li
-                    v-for="assignment in period.assignments"
-                    :key="assignment.id"
-                    class="flex flex-wrap items-center justify-between gap-3 py-4"
+                    v-for="teacher in teacherRows"
+                    :key="teacher.id"
+                    class="flex flex-col gap-4 py-5 last:pb-1 sm:flex-row sm:items-center sm:justify-between"
                 >
-                    <span class="font-medium">{{ assignment.teacher }}</span
-                    ><span
-                        v-if="assignment.submitted"
-                        class="text-sm text-emerald-700 dark:text-emerald-300"
-                        >Submitted</span
-                    ><Button v-else-if="period.is_open && !adminView" as-child
-                        ><Link
-                            :href="
-                                create({
-                                    period: period.id,
-                                    assignment: assignment.id,
-                                })
-                            "
-                            >Evaluate teacher</Link
-                        ></Button
-                    ><span
-                        v-else-if="!period.is_open"
-                        class="text-sm text-slate-500"
-                        >Not accepting submissions</span
-                    >
-                    <Button
-                        v-if="adminView && period.is_open && selectedStudent"
-                        variant="outline"
-                        as-child
-                    >
-                        <Link
-                            :href="
-                                create(
-                                    {
-                                        period: period.id,
-                                        assignment: assignment.id,
-                                    },
-                                    {
-                                        query: {
-                                            student_id: selectedStudent.id,
-                                        },
-                                    },
-                                )
-                            "
-                            >Preview questionnaire</Link
+                    <div class="flex min-w-0 items-center gap-3">
+                        <span
+                            class="flex size-10 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-[#185b94] dark:bg-blue-950 dark:text-blue-300"
+                            ><GraduationCap class="size-5" aria-hidden="true"
+                        /></span>
+                        <div class="min-w-0">
+                            <h3 class="text-sm leading-6 font-semibold">
+                                {{ teacher.name }}
+                            </h3>
+                            <p
+                                class="mt-0.5 text-xs"
+                                :class="
+                                    teacher.submitted
+                                        ? 'text-emerald-700 dark:text-emerald-300'
+                                        : 'text-slate-500 dark:text-slate-400'
+                                "
+                            >
+                                {{
+                                    teacher.submitted
+                                        ? 'Submitted for all open evaluations'
+                                        : teacher.activeEvaluation
+                                          ? adminView
+                                              ? 'Questionnaire available for preview'
+                                              : 'Ready for evaluation'
+                                          : 'No evaluation is open right now.'
+                                }}
+                            </p>
+                        </div>
+                    </div>
+                    <div class="flex flex-wrap items-end gap-3 sm:shrink-0">
+                        <div v-if="teacher.choices.length > 1">
+                            <label
+                                :for="'period-' + teacher.id"
+                                class="mb-1 block text-xs text-slate-500 dark:text-slate-400"
+                                >Evaluation period</label
+                            >
+                            <select
+                                :id="'period-' + teacher.id"
+                                :value="teacher.activeEvaluation?.period_id"
+                                class="school-input max-w-64"
+                                @change="choosePeriod(teacher.id, $event)"
+                            >
+                                <option
+                                    v-for="evaluation in teacher.choices"
+                                    :key="evaluation.period_id"
+                                    :value="evaluation.period_id"
+                                >
+                                    {{ evaluation.period }}
+                                </option>
+                            </select>
+                        </div>
+                        <Button
+                            v-if="teacher.activeEvaluation"
+                            as-child
+                            class="min-w-28 bg-[#185b94] text-white hover:bg-[#104675] dark:bg-blue-500 dark:hover:bg-blue-600"
                         >
-                    </Button>
+                            <Link
+                                :aria-label="
+                                    (adminView
+                                        ? 'Preview evaluation for '
+                                        : 'Evaluate ') + teacher.name
+                                "
+                                :href="
+                                    create(
+                                        {
+                                            period: teacher.activeEvaluation
+                                                .period_id,
+                                            assignment: teacher.assignment_id,
+                                        },
+                                        {
+                                            query: adminView
+                                                ? {
+                                                      student_id:
+                                                          selectedStudent?.id,
+                                                  }
+                                                : {},
+                                        },
+                                    )
+                                "
+                                >{{
+                                    adminView
+                                        ? 'Preview questionnaire'
+                                        : 'Evaluate'
+                                }}</Link
+                            >
+                        </Button>
+                        <Button
+                            v-else
+                            variant="outline"
+                            class="min-w-28"
+                            disabled
+                            ><Check
+                                v-if="teacher.submitted"
+                                class="size-4"
+                                aria-hidden="true"
+                            />{{
+                                teacher.submitted
+                                    ? 'Submitted'
+                                    : adminView
+                                      ? 'Preview questionnaire'
+                                      : 'Evaluate'
+                            }}</Button
+                        >
+                    </div>
                 </li>
             </ul>
             <p
-                v-if="!period.assignments.length"
-                class="mt-4 text-sm text-slate-500"
+                v-if="!adminView"
+                class="mt-5 border-t border-slate-100 pt-4 text-xs leading-5 text-slate-500 dark:border-slate-800 dark:text-slate-400"
             >
-                No eligible teachers are assigned to your enrollment for this
+                You can submit one evaluation per teacher in each evaluation
                 period.
             </p>
         </section>
         <section v-if="adminView && !selectedStudent" class="school-panel">
             <h2 class="font-semibold">Choose a student to begin</h2>
-            <p class="mt-2 text-sm text-slate-500">
-                The preview uses the student’s recorded enrollment to show the
-                evaluations available to them.
+            <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
+                The preview uses the student’s recorded enrollment to show their
+                assigned teachers.
             </p>
         </section>
-        <section v-else-if="!periods.length" class="school-panel">
-            <h2 class="font-semibold">No evaluations available</h2>
-            <p class="mt-2 text-sm text-slate-500">
-                Evaluations appear when a period is published for the recorded
-                school year. Check that the enrollment, teacher assignments,
-                form, and evaluation period are configured.
+        <section v-else-if="!teachers.length" class="school-panel">
+            <h2 class="font-semibold">
+                {{
+                    missingEnrollment.length
+                        ? 'Enrollment incomplete'
+                        : 'No teachers assigned'
+                }}
+            </h2>
+            <p
+                v-if="missingEnrollment.length"
+                class="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400"
+            >
+                {{
+                    adminView
+                        ? 'This student’s enrollment is missing its'
+                        : 'Your enrollment is missing its'
+                }}
+                {{ missingEnrollment.join(' and ') }}.
+                {{
+                    adminView
+                        ? 'Update the student’s enrollment in User Management to show their assigned teachers.'
+                        : 'Contact your school administrator to update it before you evaluate teachers.'
+                }}
             </p>
-        </section></SchoolPage
-    >
+            <p
+                v-else
+                class="mt-2 text-sm leading-6 text-slate-500 dark:text-slate-400"
+            >
+                {{
+                    adminView
+                        ? 'No active teachers match this student’s enrollment. Check their teacher assignments.'
+                        : 'No teachers have been assigned to your enrollment yet. Contact your school administrator.'
+                }}
+            </p>
+        </section>
+    </SchoolPage>
 </template>

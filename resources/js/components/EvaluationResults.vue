@@ -56,9 +56,6 @@ function width(score: number, max: number) {
                     :style="{ width: width(result.score, result.scale_max) }"
                 />
             </div>
-            <p v-if="result.performance_level" class="mt-3 text-sm font-medium">
-                {{ result.performance_level }}
-            </p>
             <div v-if="result.criteria.length" class="mt-6">
                 <h3 class="mb-3 text-sm font-semibold">Question averages</h3>
                 <div

@@ -188,65 +188,6 @@ const tabClass =
                                     No additional instructions for this version.
                                 </p>
                             </section>
-                            <section>
-                                <h3 class="mb-3 text-sm font-semibold">
-                                    Performance bands
-                                </h3>
-                                <div
-                                    v-if="template.performance_bands?.length"
-                                    class="overflow-hidden rounded-lg border"
-                                >
-                                    <table class="w-full text-left text-sm">
-                                        <thead
-                                            class="bg-slate-50 text-xs text-slate-500 dark:bg-slate-900"
-                                        >
-                                            <tr>
-                                                <th
-                                                    scope="col"
-                                                    class="px-4 py-3 font-medium"
-                                                >
-                                                    Rating
-                                                </th>
-                                                <th
-                                                    scope="col"
-                                                    class="px-4 py-3 text-right font-medium"
-                                                >
-                                                    Score range
-                                                </th>
-                                            </tr>
-                                        </thead>
-                                        <tbody class="divide-y">
-                                            <tr
-                                                v-for="(
-                                                    band, bandIndex
-                                                ) in template.performance_bands"
-                                                :key="bandIndex"
-                                            >
-                                                <td class="px-4 py-3">
-                                                    {{ band.label }}
-                                                </td>
-                                                <td
-                                                    class="px-4 py-3 text-right tabular-nums"
-                                                >
-                                                    {{
-                                                        Number(
-                                                            band.min,
-                                                        ).toFixed(2)
-                                                    }}–{{
-                                                        Number(
-                                                            band.max,
-                                                        ).toFixed(2)
-                                                    }}
-                                                </td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
-                                </div>
-                                <p v-else class="text-sm text-slate-500">
-                                    Numeric scores only. No performance bands
-                                    are configured.
-                                </p>
-                            </section>
                         </TabsContent>
                         <TabsContent value="usage" class="outline-none">
                             <p

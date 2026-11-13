@@ -2,6 +2,7 @@
 import { router } from '@inertiajs/vue3';
 import { TabsContent, TabsList, TabsRoot, TabsTrigger } from 'reka-ui';
 import { ref } from 'vue';
+import AssignmentManager from '@/components/AssignmentManager.vue';
 import FormErrors from '@/components/FormErrors.vue';
 import SchoolPage from '@/components/SchoolPage.vue';
 import SchoolRecordManager from '@/components/SchoolRecordManager.vue';
@@ -18,7 +19,7 @@ import {
     update as updateSchoolYear,
     destroy as destroySchoolYear,
 } from '@/routes/school-years';
-import type { Field, RecordData } from '@/types/school';
+import type { Field, PageLink, RecordData } from '@/types/school';
 
 defineOptions({
     layout: {
@@ -29,11 +30,27 @@ defineOptions({
         ],
     },
 });
+type ConfigurationTab = 'strands' | 'sections' | 'school-years' | 'assignments';
+
 defineProps<{
-    strands: RecordData[];
-    sections: RecordData[];
-    schoolYears: RecordData[];
-    activeTab: 'strands' | 'sections' | 'school-years';
+    strands?: RecordData[];
+    sections?: RecordData[];
+    schoolYears?: RecordData[];
+    activeTab: ConfigurationTab;
+    availableTabs: ConfigurationTab[];
+    assignments?: {
+        data: (RecordData & {
+            teacher: { name: string };
+            strand: { code: string };
+        })[];
+        links: PageLink[];
+    };
+    assignmentOptions?: {
+        teachers: { id: number; name: string }[];
+        strands: { id: number; code: string; name: string }[];
+        sections: { id: number; name: string }[];
+        schoolYears: { id: number; name: string }[];
+    };
 }>();
 const fields: Field[] = [
     {
@@ -64,7 +81,12 @@ const schoolYearFields: Field[] = [
 const deleteErrors = ref<Record<string, string>>({});
 const deleting = ref(false);
 function changeTab(value: string | number) {
-    if (value !== 'strands' && value !== 'sections' && value !== 'school-years')
+    if (
+        value !== 'strands' &&
+        value !== 'sections' &&
+        value !== 'school-years' &&
+        value !== 'assignments'
+    )
         return;
     deleteErrors.value = {};
     router.get(
@@ -96,7 +118,7 @@ function deleteRecord(record: RecordData, noun: string, url: string) {
 <template>
     <SchoolPage
         title="Configuration"
-        description="Manage strands, sections, and school years for student enrollment, teacher assignments, and evaluation periods."
+        description="Manage school years, strands, sections, and teacher assignments for student enrollment and evaluation periods."
     >
         <TabsRoot
             :model-value="activeTab"
@@ -104,26 +126,39 @@ function deleteRecord(record: RecordData, noun: string, url: string) {
             @update:model-value="changeTab"
         >
             <TabsList
-                class="flex gap-6 border-b border-slate-200 dark:border-slate-800"
-                aria-label="Strands, sections, and school years"
+                class="flex flex-wrap gap-x-6 border-b border-slate-200 dark:border-slate-800"
+                aria-label="School configuration"
             >
                 <TabsTrigger
+                    v-if="availableTabs.includes('school-years')"
+                    value="school-years"
+                    class="border-b-2 border-transparent px-1 py-3 text-sm font-medium text-slate-500 outline-none focus-visible:ring-2 focus-visible:ring-blue-500 data-[state=active]:border-blue-700 data-[state=active]:text-blue-800 dark:data-[state=active]:text-blue-300"
+                    >School Years</TabsTrigger
+                >
+                <TabsTrigger
+                    v-if="availableTabs.includes('strands')"
                     value="strands"
                     class="border-b-2 border-transparent px-1 py-3 text-sm font-medium text-slate-500 outline-none focus-visible:ring-2 focus-visible:ring-blue-500 data-[state=active]:border-blue-700 data-[state=active]:text-blue-800 dark:data-[state=active]:text-blue-300"
                     >Strands</TabsTrigger
                 >
                 <TabsTrigger
+                    v-if="availableTabs.includes('sections')"
                     value="sections"
                     class="border-b-2 border-transparent px-1 py-3 text-sm font-medium text-slate-500 outline-none focus-visible:ring-2 focus-visible:ring-blue-500 data-[state=active]:border-blue-700 data-[state=active]:text-blue-800 dark:data-[state=active]:text-blue-300"
                     >Sections</TabsTrigger
                 >
                 <TabsTrigger
-                    value="school-years"
+                    v-if="availableTabs.includes('assignments')"
+                    value="assignments"
                     class="border-b-2 border-transparent px-1 py-3 text-sm font-medium text-slate-500 outline-none focus-visible:ring-2 focus-visible:ring-blue-500 data-[state=active]:border-blue-700 data-[state=active]:text-blue-800 dark:data-[state=active]:text-blue-300"
-                    >School Years</TabsTrigger
+                    >Assignments</TabsTrigger
                 >
             </TabsList>
-            <TabsContent value="strands" class="outline-none">
+            <TabsContent
+                v-if="strands && availableTabs.includes('strands')"
+                value="strands"
+                class="outline-none"
+            >
                 <SchoolRecordManager
                     :fields="fields"
                     :records="strands"
@@ -139,7 +174,11 @@ function deleteRecord(record: RecordData, noun: string, url: string) {
                     single-column
                 />
             </TabsContent>
-            <TabsContent value="sections" class="outline-none">
+            <TabsContent
+                v-if="sections && availableTabs.includes('sections')"
+                value="sections"
+                class="outline-none"
+            >
                 <FormErrors :errors="deleteErrors" />
                 <p class="mb-4 text-sm text-slate-500">
                     Renaming a section updates its linked accounts and teacher
@@ -177,7 +216,11 @@ function deleteRecord(record: RecordData, noun: string, url: string) {
                     </template>
                 </SchoolRecordManager>
             </TabsContent>
-            <TabsContent value="school-years" class="outline-none">
+            <TabsContent
+                v-if="schoolYears && availableTabs.includes('school-years')"
+                value="school-years"
+                class="outline-none"
+            >
                 <FormErrors :errors="deleteErrors" />
                 <p class="mb-4 text-sm text-slate-500">
                     Renaming a school year updates linked enrollment, teacher
@@ -215,6 +258,20 @@ function deleteRecord(record: RecordData, noun: string, url: string) {
                         >
                     </template>
                 </SchoolRecordManager>
+            </TabsContent>
+            <TabsContent
+                v-if="
+                    assignments &&
+                    assignmentOptions &&
+                    availableTabs.includes('assignments')
+                "
+                value="assignments"
+                class="outline-none"
+            >
+                <AssignmentManager
+                    :assignments="assignments"
+                    v-bind="assignmentOptions"
+                />
             </TabsContent>
         </TabsRoot>
     </SchoolPage>
